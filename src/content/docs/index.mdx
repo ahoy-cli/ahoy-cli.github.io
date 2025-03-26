@@ -1,0 +1,36 @@
+---
+title: Welcome to Ahoy
+description: Get started with Ahoy - a powerful, YAML-based CLI task runner
+template: splash
+hero:
+  tagline: Create self-documenting CLI programs with ease, using YAML files in your source tree
+  image:
+    file: ../../assets/ahoy-logo.svg
+  actions:
+    - text: Get Started
+      link: /introduction
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/ahoy-cli/ahoy
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why Ahoy?
+
+<CardGrid stagger>
+	<Card title="Simple YAML Configuration" icon="document">
+		Define your CLI commands in simple YAML files. No coding required!
+	</Card>
+	<Card title="Self-Documenting" icon="open-book">
+		Your YAML configuration automatically generates help text and documentation.
+	</Card>
+	<Card title="Powerful Features" icon="rocket">
+		Environment variables, command composition, and powerful overrides give you flexibility.
+	</Card>
+	<Card title="Docker Ready" icon="container">
+		First-class support for Docker environments and containerized workflows.
+	</Card>
+</CardGrid>

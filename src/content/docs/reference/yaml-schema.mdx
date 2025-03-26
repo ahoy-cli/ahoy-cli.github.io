@@ -1,0 +1,319 @@
+---
+title: YAML Schema
+description: Complete reference for the Ahoy YAML configuration schema
+---
+
+# YAML Schema Reference
+
+This reference documents all available fields and their usage in Ahoy YAML configuration files.
+
+## Top-Level Fields
+
+```yaml
+# Required: API version declaration
+ahoyapi: v2
+
+# Optional: Global environment file
+env: .env
+
+# Optional: Custom command interpreter
+entrypoint:
+  - bash
+  - "-c"
+  - '{{cmd}}'
+  - '{{name}}'
+
+# Required: Command definitions
+commands:
+  command-name:
+    usage: Description
+    cmd: command to run
+```
+
+## Field Specifications
+
+### `ahoyapi`
+
+**Required**: Yes  
+**Type**: String  
+**Allowed Values**: `v2`  
+**Description**: Specifies the Ahoy API version to use.
+
+```yaml
+ahoyapi: v2
+```
+
+### `env`
+
+**Required**: No  
+**Type**: String  
+**Description**: Path to environment file, relative to the YAML file location.
+
+```yaml
+env: .env
+env: .env.local
+env: ../shared/config.env
+```
+
+### `entrypoint`
+
+**Required**: No  
+**Type**: Array of Strings  
+**Description**: Defines how commands are executed. Default is bash.
+
+```yaml
+entrypoint:
+  - bash
+  - "-c"
+  - '{{cmd}}'
+  - '{{name}}'
+```
+
+Available template variables:
+- `{{cmd}}`: The command to execute
+- `{{name}}`: The name of the command
+
+### `commands`
+
+**Required**: Yes  
+**Type**: Map of command definitions  
+**Description**: Container for all command definitions.
+
+## Command Definition Fields
+
+Each command under `commands` can have these fields:
+
+### `usage`
+
+**Required**: Yes  
+**Type**: String  
+**Description**: Help text shown when running `ahoy help command-name`
+
+```yaml
+commands:
+  example:
+    usage: |
+      Description of what this command does
+      
+      Arguments:
+        $1: First argument
+        $2: Second argument
+```
+
+### `cmd`
+
+**Required**: Yes (unless using `imports`)  
+**Type**: String  
+**Description**: The command to execute
+
+```yaml
+commands:
+  single-line:
+    cmd: echo "Hello"
+  
+  multi-line:
+    cmd: |
+      echo "Starting..."
+      npm install
+      echo "Done!"
+```
+
+### `aliases`
+
+**Required**: No  
+**Type**: Array of Strings  
+**Description**: Alternative names for the command
+
+```yaml
+commands:
+  start-dev:
+    usage: Start development environment
+    aliases: ["up", "start"]
+    cmd: docker-compose up -d
+```
+
+### `imports`
+
+**Required**: No  
+**Type**: Array of Strings  
+**Description**: List of YAML files to import
+
+```yaml
+commands:
+  dev:
+    usage: Development commands
+    imports:
+      - ./commands/dev.ahoy.yml
+      - ./commands/docker.ahoy.yml
+```
+
+### `env`
+
+**Required**: No  
+**Type**: String  
+**Description**: Command-specific environment file
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy application
+    env: .env.deploy
+    cmd: ./deploy.sh
+```
+
+## Complete Schema Example
+
+```yaml
+ahoyapi: v2
+
+env: .env
+
+entrypoint:
+  - bash
+  - "-c"
+  - '{{cmd}}'
+  - '{{name}}'
+
+commands:
+  # Basic command
+  hello:
+    usage: Say hello to someone
+    cmd: echo "Hello, $1!"
+    aliases: ["hi", "greet"]
+
+  # Command with custom environment
+  db:
+    usage: Database operations
+    env: .env.db
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+
+  # Command with imports
+  dev:
+    usage: Development commands
+    imports:
+      - ./dev.ahoy.yml
+
+  # Multi-line command
+  setup:
+    usage: Set up project
+    cmd: |
+      echo "Installing dependencies..."
+      npm install
+      composer install
+      echo "Done!"
+```
+
+## Environment File Format
+
+Environment files use standard shell format:
+
+```bash
+# Comments are supported
+VARIABLE=value
+QUOTED="value with spaces"
+
+# Multi-line values
+CERT="-----BEGIN CERTIFICATE-----
+MIICWDCCAcGgAwIBAgIJAKe0yZE6xcJ2MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+...
+-----END CERTIFICATE-----"
+
+# Export is optional
+export PATH=$PATH:/usr/local/bin
+```
+
+## Command Execution Context
+
+Commands have access to:
+
+### Positional Arguments
+- `$1`, `$2`, etc.: Individual arguments
+- `$@`: All arguments as array
+- `$#`: Number of arguments
+- `$0`: Command name
+
+### Environment Variables
+- Variables from global env file
+- Variables from command-specific env file
+- System environment variables
+
+## Special Considerations
+
+### File Paths
+- All paths are relative to the YAML file location
+- Environment file paths are also relative
+- Import paths should use `./` for current directory
+
+### Command Override Rules
+- Later commands override earlier ones
+- Imported commands can be overridden
+- Last definition wins
+
+### Environment Variable Precedence
+1. Command-specific env file
+2. Global env file
+3. System environment variables
+
+## Best Practices
+
+### YAML File Organization
+
+```yaml
+# Start with version
+ahoyapi: v2
+
+# Global configuration
+env: .env
+entrypoint: [...]
+
+# Group related commands
+commands:
+  # Development commands
+  dev-start:
+    usage: ...
+  dev-stop:
+    usage: ...
+
+  # Database commands
+  db-backup:
+    usage: ...
+  db-restore:
+    usage: ...
+```
+
+### Command Naming
+
+```yaml
+commands:
+  # ✅ Good: Clear and descriptive
+  db-migrate:
+    usage: Run database migrations
+  
+  # ❌ Bad: Unclear abbreviation
+  dbm:
+    usage: Run database migrations
+```
+
+### Usage Documentation
+
+```yaml
+commands:
+  deploy:
+    usage: |
+      Deploy the application to specified environment
+      
+      Arguments:
+        $1: Environment (dev|staging|prod)
+        $2: Version tag (optional)
+      
+      Examples:
+        ahoy deploy dev v1.0.0
+        ahoy deploy prod
+```
+
+## Related Topics
+
+- [YAML Configuration Guide](guides/yaml-config)
+- [Command Execution](guides/command-execution)
+- [Environment Variables](guides/environment)
+- [CLI Reference](reference/cli)

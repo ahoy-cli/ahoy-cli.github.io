@@ -1,0 +1,225 @@
+---
+title: YAML Configuration
+description: Learn how to configure Ahoy using YAML files
+---
+
+# YAML Configuration Guide
+
+The `.ahoy.yml` file is the heart of Ahoy's functionality. This guide covers all the configuration options and best practices for structuring your Ahoy commands.
+
+## Basic Structure
+
+Every Ahoy YAML file must start with the version declaration and can contain commands and optional configuration:
+
+```yaml
+ahoyapi: v2
+
+# Optional global environment file
+env: .env
+
+# Optional command entrypoint override
+entrypoint:
+  - bash
+  - "-c"
+  - '{{cmd}}'
+  - '{{name}}'
+
+# Your commands go here
+commands:
+  command-name:
+    usage: Description of the command
+    cmd: echo "Command content"
+```
+
+## Command Configuration
+
+Each command can have the following properties:
+
+```yaml
+commands:
+  example-command:
+    # Required: Description shown in help
+    usage: Description of what the command does
+    
+    # Required: The actual command to execute
+    cmd: echo "Hello World"
+    
+    # Optional: Alternative names for the command
+    aliases: ["ex", "example"]
+    
+    # Optional: Command-specific environment file
+    env: .env.local
+    
+    # Optional: Import other Ahoy files
+    imports:
+      - ./other-commands.ahoy.yml
+```
+
+## Command Types
+
+### Single-Line Commands
+
+Simple commands can be written on a single line:
+
+```yaml
+commands:
+  greet:
+    usage: Say hello
+    cmd: echo "Hello!"
+```
+
+### Multi-Line Commands
+
+For more complex commands, use the YAML pipe syntax (`|`):
+
+```yaml
+commands:
+  setup:
+    usage: Set up the development environment
+    cmd: |
+      echo "Starting setup..."
+      npm install
+      composer install
+      echo "Setup complete!"
+```
+
+### Commands with Arguments
+
+You can use bash-style argument variables:
+
+```yaml
+commands:
+  greet:
+    usage: Greet someone by name
+    cmd: |
+      echo "Hello, $1!"
+      echo "All arguments: $@"
+```
+
+## Environment Variables
+
+### Global Environment File
+
+```yaml
+ahoyapi: v2
+env: .env
+
+commands:
+  db-connect:
+    usage: Connect to database
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+### Command-Specific Environment
+
+```yaml
+commands:
+  staging-db:
+    usage: Connect to staging database
+    env: .env.staging
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+## Command Imports
+
+You can split your commands across multiple files and import them:
+
+```yaml
+commands:
+  database:
+    usage: Database-related commands
+    imports:
+      - ./database-commands.ahoy.yml
+      
+  docker:
+    usage: Docker-related commands
+    imports:
+      - ./docker-commands.ahoy.yml
+```
+
+## Custom Entrypoints
+
+The default entrypoint uses bash, but you can override it:
+
+### Using Python
+```yaml
+entrypoint:
+  - python3
+  - "-c"
+  - '{{cmd}}'
+```
+
+### Using Node.js
+```yaml
+entrypoint:
+  - node
+  - "-e"
+  - '{{cmd}}'
+```
+
+### Using PHP
+```yaml
+entrypoint:
+  - php
+  - "-r"
+  - '{{cmd}}'
+```
+
+## Best Practices
+
+1. **Organize by Function**: Group related commands together or split them into separate files.
+
+```yaml
+commands:
+  dev:
+    usage: Development commands
+    imports:
+      - ./dev-commands.ahoy.yml
+  
+  deploy:
+    usage: Deployment commands
+    imports:
+      - ./deploy-commands.ahoy.yml
+```
+
+2. **Use Descriptive Names**: Command names should be clear and consistent.
+
+```yaml
+commands:
+  db-backup:
+    usage: Create a database backup
+  db-restore:
+    usage: Restore a database backup
+  db-migrate:
+    usage: Run database migrations
+```
+
+3. **Document Usage**: Provide clear usage descriptions.
+
+```yaml
+commands:
+  install-deps:
+    usage: |
+      Install project dependencies
+      Examples:
+        ahoy install-deps
+        ahoy install-deps --no-dev
+```
+
+4. **Use Environment Variables**: Keep sensitive or configurable values in environment files.
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy to specified environment
+    env: .env.deploy
+    cmd: |
+      ssh $DEPLOY_USER@$DEPLOY_HOST "$DEPLOY_COMMAND"
+```
+
+## Next Steps
+
+- Learn about [Command Execution](guides/command-execution) patterns
+- Explore [Environment Variables](guides/environment) in detail
+- See how to [Import and Override](guides/importing) commands
+- Check out the [Docker Integration](examples/docker) examples

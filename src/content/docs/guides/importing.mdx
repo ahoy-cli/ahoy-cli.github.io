@@ -1,0 +1,350 @@
+---
+title: Importing & Overriding
+description: Learn how to organize and override Ahoy commands across multiple files
+---
+
+# Importing and Overriding Commands
+
+Ahoy allows you to split your commands across multiple files and provides powerful override capabilities. This guide shows you how to organize your commands effectively and customize inherited commands.
+
+## Basic Command Imports
+
+### Simple Import Example
+
+```yaml
+# .ahoy.yml
+ahoyapi: v2
+
+commands:
+  dev:
+    usage: Development commands
+    imports:
+      - ./commands/dev.ahoy.yml
+  
+  deploy:
+    usage: Deployment commands
+    imports:
+      - ./commands/deploy.ahoy.yml
+```
+
+```yaml
+# commands/dev.ahoy.yml
+commands:
+  start:
+    usage: Start development environment
+    cmd: docker-compose up -d
+  
+  stop:
+    usage: Stop development environment
+    cmd: docker-compose down
+```
+
+This creates commands accessible as:
+- `ahoy dev start`
+- `ahoy dev stop`
+
+## Organization Patterns
+
+### Feature-Based Organization
+
+```yaml
+# .ahoy.yml
+commands:
+  database:
+    usage: Database operations
+    imports:
+      - ./commands/database.ahoy.yml
+  
+  docker:
+    usage: Docker operations
+    imports:
+      - ./commands/docker.ahoy.yml
+  
+  testing:
+    usage: Testing commands
+    imports:
+      - ./commands/testing.ahoy.yml
+```
+
+### Environment-Based Organization
+
+```yaml
+# .ahoy.yml
+commands:
+  local:
+    usage: Local development commands
+    imports:
+      - ./commands/local.ahoy.yml
+  
+  staging:
+    usage: Staging environment commands
+    imports:
+      - ./commands/staging.ahoy.yml
+  
+  production:
+    usage: Production environment commands
+    imports:
+      - ./commands/production.ahoy.yml
+```
+
+## Command Overriding
+
+Ahoy uses a "last in wins" rule for duplicate commands. Later definitions override earlier ones.
+
+### Basic Override Example
+
+```yaml
+# base.ahoy.yml
+commands:
+  build:
+    usage: Basic build command
+    cmd: npm run build
+
+# .ahoy.yml
+ahoyapi: v2
+
+commands:
+  default:
+    imports:
+      - ./base.ahoy.yml
+    
+  build:
+    usage: Enhanced build command
+    cmd: |
+      echo "Running enhanced build..."
+      npm run lint
+      npm run build
+      npm run test
+```
+
+### Selective Overriding
+
+```yaml
+# commands/common-db.ahoy.yml
+commands:
+  create:
+    usage: Create database
+    cmd: createdb $DB_NAME
+  
+  drop:
+    usage: Drop database
+    cmd: dropdb $DB_NAME
+
+# commands/local-db.ahoy.yml
+commands:
+  create:
+    usage: Create local database with sample data
+    cmd: |
+      createdb $DB_NAME
+      psql $DB_NAME < sample-data.sql
+```
+
+## Inheritance Chains
+
+You can create chains of imports to build up functionality:
+
+```yaml
+# base.ahoy.yml
+commands:
+  test:
+    usage: Run tests
+    cmd: npm test
+
+# dev.ahoy.yml
+commands:
+  default:
+    imports:
+      - ./base.ahoy.yml
+  
+  test:
+    usage: Run tests with watch mode
+    cmd: npm test -- --watch
+
+# ci.ahoy.yml
+commands:
+  default:
+    imports:
+      - ./base.ahoy.yml
+  
+  test:
+    usage: Run tests with coverage
+    cmd: npm test -- --coverage
+```
+
+## Shared Commands
+
+Create reusable command sets that can be imported by multiple projects:
+
+```yaml
+# shared/docker.ahoy.yml
+commands:
+  up:
+    usage: Start containers
+    cmd: docker-compose up -d
+  
+  down:
+    usage: Stop containers
+    cmd: docker-compose down
+  
+  logs:
+    usage: View container logs
+    cmd: docker-compose logs -f
+
+# project1/.ahoy.yml
+commands:
+  docker:
+    usage: Docker commands
+    imports:
+      - ../shared/docker.ahoy.yml
+
+# project2/.ahoy.yml
+commands:
+  docker:
+    usage: Docker commands
+    imports:
+      - ../shared/docker.ahoy.yml
+```
+
+## Best Practices
+
+### 1. Use Clear Directory Structure
+
+```
+project/
+├── .ahoy.yml
+├── commands/
+│   ├── dev.ahoy.yml
+│   ├── deploy.ahoy.yml
+│   └── database.ahoy.yml
+└── shared/
+    ├── docker.ahoy.yml
+    └── testing.ahoy.yml
+```
+
+### 2. Create Command Namespaces
+
+```yaml
+# .ahoy.yml
+commands:
+  dev:
+    usage: Development commands
+    imports:
+      - ./commands/dev.ahoy.yml
+  
+  prod:
+    usage: Production commands
+    imports:
+      - ./commands/prod.ahoy.yml
+```
+
+### 3. Document Import Sources
+
+```yaml
+commands:
+  shared:
+    usage: |
+      Shared commands from company-wide templates
+      Source: github.com/company/ahoy-commands
+    imports:
+      - ./shared/company-commands.ahoy.yml
+```
+
+### 4. Use Environment-Specific Overrides
+
+```yaml
+# .ahoy.yml
+commands:
+  default:
+    imports:
+      - ./commands/base.ahoy.yml
+      - ./commands/${ENVIRONMENT:-local}.ahoy.yml
+```
+
+## Advanced Patterns
+
+### Conditional Imports
+
+```yaml
+commands:
+  setup:
+    usage: Set up project
+    cmd: |
+      if [ -f "./commands/${PROJECT_TYPE}.ahoy.yml" ]; then
+        ahoy --file ./commands/${PROJECT_TYPE}.ahoy.yml setup
+      else
+        echo "Unknown project type: ${PROJECT_TYPE}"
+        exit 1
+      fi
+```
+
+### Dynamic Command Sets
+
+```yaml
+commands:
+  load:
+    usage: Load environment-specific commands
+    cmd: |
+      ENV_FILE="./commands/$1.ahoy.yml"
+      if [ -f "$ENV_FILE" ]; then
+        ahoy --file "$ENV_FILE" ${@:2}
+      else
+        echo "Environment '$1' not found"
+        exit 1
+      fi
+```
+
+### Version-Specific Commands
+
+```yaml
+# .ahoy.yml
+commands:
+  default:
+    imports:
+      - ./commands/v1.ahoy.yml
+      - ./commands/v2.ahoy.yml
+
+# commands/v2.ahoy.yml
+commands:
+  deploy:
+    usage: New deployment process
+    cmd: ./scripts/v2/deploy.sh
+
+# commands/v1.ahoy.yml
+commands:
+  deploy:
+    usage: Legacy deployment process
+    cmd: ./scripts/v1/deploy.sh
+```
+
+## Troubleshooting
+
+### Command Conflicts
+
+If commands are not being overridden as expected:
+
+1. Check the import order
+2. Verify file paths
+3. Use `ahoy --verbose` to debug
+
+### Import Path Issues
+
+Always use relative paths from the importing file:
+
+```yaml
+# ✅ Good
+imports:
+  - ./commands/dev.ahoy.yml
+  - ../shared/docker.ahoy.yml
+
+# ❌ Bad
+imports:
+  - /absolute/path/to/commands.ahoy.yml
+  - commands/dev.ahoy.yml  # Missing ./
+```
+
+## Next Steps
+
+- Learn about [Command Execution](guides/command-execution) patterns
+- Explore [Environment Variables](guides/environment)
+- See [Docker Integration](examples/docker) examples
+- Check out the [CLI Reference](reference/cli)

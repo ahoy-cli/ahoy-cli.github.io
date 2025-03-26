@@ -1,0 +1,269 @@
+---
+title: Environment Variables
+description: Learn how to use environment variables effectively with Ahoy
+---
+
+# Environment Variables in Ahoy
+
+Ahoy provides flexible environment variable support through `.env` files at both the global and command-specific levels. This guide explains how to use environment variables effectively in your Ahoy commands.
+
+## Basic Usage
+
+### Global Environment File
+
+You can specify a global environment file that applies to all commands:
+
+```yaml
+ahoyapi: v2
+
+# Global environment file
+env: .env
+
+commands:
+  db-connect:
+    usage: Connect to the database
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+### Command-Specific Environment
+
+Individual commands can have their own environment files that override global variables:
+
+```yaml
+commands:
+  staging-db:
+    usage: Connect to staging database
+    env: .env.staging
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+  
+  prod-db:
+    usage: Connect to production database
+    env: .env.production
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+## Environment File Format
+
+Environment files use standard shell format:
+
+```bash
+# .env
+DB_USER=root
+DB_PASS=root
+DB_NAME=myapp
+
+# Comments are supported
+API_KEY=abc123
+
+# Multi-line values
+PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEA14+bB+QIDAQAB
+...
+-----END RSA PRIVATE KEY-----"
+```
+
+## Variable Precedence
+
+Ahoy follows this precedence order (highest to lowest):
+
+1. Command-specific environment file
+2. Global environment file
+3. System environment variables
+
+Example:
+```yaml
+ahoyapi: v2
+env: .env         # DB_USER=root
+
+commands:
+  dev-db:
+    env: .env.dev # DB_USER=dev
+    cmd: mysql -u$DB_USER $DB_NAME
+```
+
+Running `ahoy dev-db` will use `DB_USER=dev` from `.env.dev`, overriding the global setting.
+
+## Common Use Cases
+
+### Database Connections
+
+```yaml
+# .env
+DB_USER=root
+DB_PASS=root
+DB_NAME=myapp
+DB_HOST=localhost
+
+# .env.staging
+DB_USER=staging_user
+DB_PASS=staging_pass
+DB_NAME=myapp_staging
+DB_HOST=staging.db.example.com
+
+commands:
+  mysql:
+    usage: Connect to local database
+    cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
+  
+  staging-mysql:
+    usage: Connect to staging database
+    env: .env.staging
+    cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
+```
+
+### API Configurations
+
+```yaml
+# .env
+API_URL=http://localhost:3000
+API_KEY=local_key
+
+# .env.prod
+API_URL=https://api.example.com
+API_KEY=prod_key
+
+commands:
+  test-api:
+    usage: Test API connection
+    cmd: curl -H "Authorization: Bearer $API_KEY" $API_URL/health
+  
+  prod-api:
+    usage: Test production API
+    env: .env.prod
+    cmd: curl -H "Authorization: Bearer $API_KEY" $API_URL/health
+```
+
+### Docker Environment
+
+```yaml
+# .env.docker
+COMPOSE_PROJECT_NAME=myapp
+COMPOSE_FILE=docker-compose.yml
+DOCKER_BUILDKIT=1
+
+commands:
+  up:
+    usage: Start Docker environment
+    env: .env.docker
+    cmd: docker-compose up -d
+  
+  build:
+    usage: Build Docker images
+    env: .env.docker
+    cmd: docker-compose build
+```
+
+## Working with Multiple Environments
+
+### Environment-Specific Files
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy to specified environment
+    cmd: |
+      if [ -f ".env.$1" ]; then
+        source .env.$1
+        echo "Deploying to $DEPLOY_ENV..."
+        ./deploy.sh
+      else
+        echo "Unknown environment: $1"
+        exit 1
+      fi
+```
+
+### Combining Environment Files
+
+```yaml
+commands:
+  setup:
+    usage: Set up environment
+    cmd: |
+      # Load base environment
+      set -a
+      source .env
+      
+      # Override with environment-specific vars
+      if [ -f ".env.$1" ]; then
+        source .env.$1
+      fi
+      set +a
+      
+      echo "Setting up $ENVIRONMENT environment..."
+      ./setup.sh
+```
+
+## Security Best Practices
+
+1. **Gitignore Environment Files**
+   ```gitignore
+   .env*
+   !.env.example
+   ```
+
+2. **Provide Example Files**
+   ```yaml
+   commands:
+     setup:
+       usage: Set up local environment
+       cmd: |
+         if [ ! -f .env ]; then
+           cp .env.example .env
+           echo "Created .env from example"
+         fi
+   ```
+
+3. **Validate Required Variables**
+   ```yaml
+   commands:
+     deploy:
+       usage: Deploy application
+       env: .env.deploy
+       cmd: |
+         for var in API_KEY DB_PASS DEPLOY_TOKEN; do
+           if [ -z "${!var}" ]; then
+             echo "Error: $var is not set"
+             exit 1
+           fi
+         done
+         ./deploy.sh
+   ```
+
+## Common Issues and Solutions
+
+### Variable Not Found
+If a variable isn't being set, check:
+1. The environment file path is correct
+2. The file permissions allow reading
+3. The variable name matches exactly (case-sensitive)
+
+### Escaping Special Characters
+Use quotes for values with special characters:
+```bash
+# .env
+PASSWORD="p@ssw0rd!$"
+QUERY="SELECT * FROM users;"
+```
+
+### Multi-Line Commands
+Use heredocs for complex SQL or scripts:
+```yaml
+commands:
+  query:
+    usage: Run complex query
+    cmd: |
+      mysql -u$DB_USER -p$DB_PASS $DB_NAME <<EOF
+        SELECT 
+          users.*, 
+          orders.total 
+        FROM users 
+        JOIN orders ON users.id = orders.user_id;
+      EOF
+```
+
+## Next Steps
+
+- Learn about [Command Execution](guides/command-execution) patterns
+- Explore [Importing & Overriding](guides/importing) commands
+- See [Docker Integration](examples/docker) examples
+- Check out the [CLI Reference](reference/cli)

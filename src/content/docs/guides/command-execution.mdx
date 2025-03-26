@@ -1,0 +1,262 @@
+---
+title: Command Execution
+description: Understanding how Ahoy executes commands and handles different execution patterns
+---
+
+# Command Execution Guide
+
+This guide explains how Ahoy executes commands and covers various execution patterns you can use in your YAML configuration.
+
+## Basic Command Execution
+
+By default, Ahoy executes commands using bash. Each command runs relative to the location of your `.ahoy.yml` file, regardless of which directory you're in when you run the command.
+
+### Simple Commands
+
+```yaml
+commands:
+  hello:
+    usage: Say hello
+    cmd: echo "Hello, World!"
+```
+
+When you run `ahoy hello`, Ahoy:
+1. Locates the nearest `.ahoy.yml` file
+2. Changes to that directory
+3. Executes the command using bash
+
+## Command Arguments
+
+Ahoy passes arguments to your commands using bash-style positional parameters:
+
+```yaml
+commands:
+  greet:
+    usage: Greet someone
+    cmd: echo "Hello, $1!"
+  
+  list-files:
+    usage: List files in a directory
+    cmd: ls -la $1
+  
+  echo-all:
+    usage: Echo all arguments
+    cmd: echo "All args: $@"
+```
+
+Usage examples:
+```bash
+ahoy greet John           # Output: Hello, John!
+ahoy list-files /tmp      # Lists files in /tmp
+ahoy echo-all 1 2 3       # Output: All args: 1 2 3
+```
+
+## Interactive Commands
+
+Ahoy fully supports interactive commands, making it great for database shells or other interactive tools:
+
+```yaml
+commands:
+  mysql:
+    usage: Open MySQL shell
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+  
+  psql:
+    usage: Open PostgreSQL shell
+    cmd: psql -U $DB_USER $DB_NAME
+```
+
+## Multi-Line Scripts
+
+For complex commands, use the YAML pipe syntax (`|`) to write multi-line scripts:
+
+```yaml
+commands:
+  setup:
+    usage: Set up the project
+    cmd: |
+      echo "Installing dependencies..."
+      npm install
+      
+      echo "Running migrations..."
+      ./migrate.sh
+      
+      echo "Starting services..."
+      docker-compose up -d
+```
+
+## Command Chaining
+
+You can call other Ahoy commands from within a command:
+
+```yaml
+commands:
+  setup-db:
+    usage: Set up the database
+    cmd: |
+      ahoy db-create
+      ahoy db-migrate
+      ahoy db-seed
+  
+  db-create:
+    usage: Create the database
+    cmd: createdb myapp
+  
+  db-migrate:
+    usage: Run migrations
+    cmd: ./migrate.sh
+  
+  db-seed:
+    usage: Seed the database
+    cmd: ./seed.sh
+```
+
+## Working with Docker
+
+Ahoy is particularly good at simplifying Docker commands:
+
+```yaml
+commands:
+  up:
+    usage: Start containers
+    cmd: docker-compose up -d
+  
+  exec:
+    usage: Execute command in container
+    cmd: docker-compose exec app $@
+  
+  npm:
+    usage: Run npm commands in container
+    cmd: docker-compose exec app npm $@
+```
+
+Usage:
+```bash
+ahoy up                  # Start containers
+ahoy exec ls -la         # Run ls -la in app container
+ahoy npm install         # Run npm install in container
+```
+
+## Custom Entrypoints
+
+While bash is the default, you can use other interpreters:
+
+### Python Example
+```yaml
+entrypoint:
+  - python3
+  - "-c"
+  - '{{cmd}}'
+
+commands:
+  hello:
+    usage: Python hello world
+    cmd: |
+      import sys
+      name = sys.argv[1] if len(sys.argv) > 1 else "World"
+      print(f"Hello, {name}!")
+```
+
+### Node.js Example
+```yaml
+entrypoint:
+  - node
+  - "-e"
+  - '{{cmd}}'
+
+commands:
+  hello:
+    usage: Node.js hello world
+    cmd: |
+      const name = process.argv[3] || 'World';
+      console.log(`Hello, ${name}!`);
+```
+
+## Error Handling
+
+Ahoy respects command exit codes. If a command fails:
+
+1. The error output is displayed
+2. The exit code is passed through
+3. Any subsequent commands in a chain are not executed
+
+Example with error handling:
+
+```yaml
+commands:
+  safe-deploy:
+    usage: Deploy with checks
+    cmd: |
+      if ! ahoy tests; then
+        echo "Tests failed! Aborting deploy."
+        exit 1
+      fi
+      
+      if ! ahoy lint; then
+        echo "Linting failed! Aborting deploy."
+        exit 1
+      fi
+      
+      echo "All checks passed, deploying..."
+      ahoy deploy
+```
+
+## Best Practices
+
+1. **Keep Commands Focused**: Each command should do one thing well.
+   ```yaml
+   commands:
+     build:
+       usage: Build the application
+       cmd: npm run build
+     
+     test:
+       usage: Run tests
+       cmd: npm test
+     
+     deploy:
+       usage: Deploy the app
+       cmd: |
+         ahoy build
+         ahoy test
+         ./deploy.sh
+   ```
+
+2. **Use Environment Variables**: Make commands configurable.
+   ```yaml
+   commands:
+     deploy:
+       usage: Deploy to specified environment
+       env: .env.deploy
+       cmd: |
+         echo "Deploying to $DEPLOY_ENV..."
+         ./deploy.sh $DEPLOY_ENV
+   ```
+
+3. **Document Command Usage**: Include examples in usage text.
+   ```yaml
+   commands:
+     create-user:
+       usage: |
+         Create a new user
+         Examples:
+           ahoy create-user john doe admin
+           ahoy create-user jane smith user
+       cmd: ./create-user.sh $1 $2 $3
+   ```
+
+4. **Use Command Aliases**: Create shortcuts for common commands.
+   ```yaml
+   commands:
+     start-dev:
+       usage: Start development environment
+       aliases: ["up", "start"]
+       cmd: docker-compose up -d
+   ```
+
+## Next Steps
+
+- Learn about [Environment Variables](guides/environment)
+- Explore [Importing & Overriding](guides/importing) commands
+- See [Docker Integration](examples/docker) examples
+- Check out the complete [CLI Reference](reference/cli)

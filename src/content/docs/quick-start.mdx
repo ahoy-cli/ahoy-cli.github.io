@@ -1,0 +1,154 @@
+---
+title: Quick Start
+description: Create your first Ahoy commands and learn the basics
+---
+
+# Quick Start Guide
+
+This guide will help you create your first Ahoy commands and understand the basic concepts. We'll create a simple development workflow that demonstrates Ahoy's key features.
+
+## Creating Your First Ahoy File
+
+1. Create a new directory for your project:
+   ```bash
+   mkdir my-project
+   cd my-project
+   ```
+
+2. Create a new file called `.ahoy.yml`:
+   ```bash
+   touch .ahoy.yml
+   ```
+
+3. Add the following content to `.ahoy.yml`:
+   ```yaml
+   ahoyapi: v2
+   
+   commands:
+     hello:
+       usage: Say hello to someone
+       cmd: echo "Hello, $1!"
+       
+     list:
+       usage: List files in the current directory
+       cmd: ls -la
+   ```
+
+## Understanding the Basic Structure
+
+The `.ahoy.yml` file has a simple structure:
+
+- `ahoyapi: v2` - Required version declaration
+- `commands:` - Section containing all your commands
+- Each command has:
+  - A name (e.g., `hello`)
+  - `usage:` - Help text describing the command
+  - `cmd:` - The actual command to execute
+
+## Running Your First Commands
+
+1. Try the hello command:
+   ```bash
+   ahoy hello World
+   # Output: Hello, World!
+   ```
+
+2. List your directory:
+   ```bash
+   ahoy list
+   # Output: Directory listing...
+   ```
+
+3. View available commands:
+   ```bash
+   ahoy
+   # Output: List of commands and their usage
+   ```
+
+## A More Practical Example
+
+Let's create a more practical example that might be used in a web development project:
+
+```yaml
+ahoyapi: v2
+
+commands:
+  start:
+    usage: Start the development environment
+    cmd: docker-compose up -d
+
+  stop:
+    usage: Stop the development environment
+    cmd: docker-compose down
+
+  logs:
+    usage: View container logs
+    cmd: docker-compose logs -f $1
+
+  db-import:
+    usage: Import a database file
+    cmd: |
+      echo "Importing database from $1..."
+      docker-compose exec -T database mysql -uroot -proot mydb < $1
+
+  test:
+    usage: Run the test suite
+    cmd: |
+      echo "Running tests..."
+      docker-compose exec app npm test
+```
+
+## Using Environment Variables
+
+Ahoy supports environment variables through `.env` files. Here's an example:
+
+1. Create a `.env` file:
+   ```bash
+   DB_USER=root
+   DB_PASS=root
+   DB_NAME=myapp
+   ```
+
+2. Update your `.ahoy.yml`:
+   ```yaml
+   ahoyapi: v2
+   
+   env: .env
+   
+   commands:
+     db-connect:
+       usage: Connect to the database
+       cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+   ```
+
+## Command Aliases
+
+You can create aliases for frequently used commands:
+
+```yaml
+ahoyapi: v2
+
+commands:
+  start-dev:
+    usage: Start development environment
+    cmd: docker-compose up -d
+    aliases: ["up", "start"]
+```
+
+Now you can use any of these commands:
+```bash
+ahoy start-dev
+ahoy up
+ahoy start
+```
+
+## Next Steps
+
+Now that you understand the basics, you can:
+
+1. Learn about [YAML Configuration](guides/yaml-config) in detail
+2. Explore [Command Execution](guides/command-execution) options
+3. See how to use [Environment Variables](guides/environment)
+4. Check out more complex [Docker Integration](examples/docker) examples
+
+Remember that Ahoy commands always run relative to the `.ahoy.yml` file location, so you can run them from any subdirectory in your project.

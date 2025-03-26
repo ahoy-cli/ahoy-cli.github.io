@@ -1,0 +1,82 @@
+---
+title: Installation
+description: Learn how to install Ahoy on your system
+---
+
+# Installing Ahoy
+
+Ahoy can be installed on macOS, Linux, and Windows (via WSL2). Choose the installation method that matches your operating system.
+
+## macOS Installation
+
+The recommended way to install Ahoy on macOS is through Homebrew:
+
+```bash
+brew install ahoy
+```
+
+## Linux Installation
+
+On Linux systems, you can download the latest release binary directly from GitHub. The following script will automatically detect your system architecture and install the appropriate version:
+
+```bash
+os=$(uname -s | tr '[:upper:]' '[:lower:]') && \
+architecture=$(case $(uname -m) in \
+  x86_64 | amd64) echo "amd64" ;; \
+  aarch64 | arm64 | armv8) echo "arm64" ;; \
+  *) echo "amd64" ;; \
+esac) && \
+sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture \
+  -O /usr/local/bin/ahoy && \
+sudo chown $USER /usr/local/bin/ahoy && \
+chmod +x /usr/local/bin/ahoy
+```
+
+Alternatively, you can:
+
+1. Visit the [Ahoy releases page](https://github.com/ahoy-cli/ahoy/releases)
+2. Download the appropriate binary for your platform
+3. Move it to a location in your `$PATH`
+4. Rename it to `ahoy`
+5. Make it executable with `chmod +x`
+
+## Windows Installation
+
+For Windows users, Ahoy is supported through Windows Subsystem for Linux 2 (WSL2):
+
+1. [Install WSL2](https://docs.microsoft.com/en-us/windows/wsl/install)
+2. Open your WSL2 terminal
+3. Follow the Linux installation instructions above
+
+## Shell Completion
+
+### Zsh Completion
+
+For Zsh users, there's a dedicated plugin available:
+
+1. Visit [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy)
+2. Follow the installation instructions for your Zsh plugin manager
+
+### Bash Completion
+
+For Bash users:
+
+1. Ensure bash-completion is installed
+2. Add the following to your `~/.bashrc`:
+   ```bash
+   eval "$(ahoy --generate-bash-completion)"
+   ```
+
+## Verifying Installation
+
+After installation, verify that Ahoy is working correctly:
+
+```bash
+ahoy --version
+```
+
+You should see the version number of Ahoy displayed.
+
+## Next Steps
+
+With Ahoy installed, you're ready to start creating your first Ahoy commands. Continue to the [Quick Start Guide](quick-start) to learn how to create and use Ahoy commands in your projects.

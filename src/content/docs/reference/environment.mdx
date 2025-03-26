@@ -1,0 +1,353 @@
+---
+title: Environment Variables Reference
+description: Complete reference for environment variables in Ahoy
+---
+
+# Environment Variables Reference
+
+This reference provides a comprehensive guide to using environment variables in Ahoy, including all supported features, formats, and best practices.
+
+## Environment File Locations
+
+### Global Environment File
+
+Specified at the top level of your `.ahoy.yml`:
+
+```yaml
+ahoyapi: v2
+env: .env
+
+commands:
+  # Commands can access variables from .env
+```
+
+### Command-Specific Environment File
+
+Specified within individual commands:
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy application
+    env: .env.deploy
+    cmd: ./deploy.sh
+```
+
+## Environment File Format
+
+### Basic Syntax
+
+```bash
+# Simple variable
+VARIABLE=value
+
+# Variable with spaces
+VARIABLE="value with spaces"
+
+# Multi-line variable
+VARIABLE="line 1
+line 2
+line 3"
+
+# Comments
+# This is a comment
+VARIABLE=value  # Inline comment
+
+# Export syntax (optional)
+export VARIABLE=value
+```
+
+### Variable Types
+
+```bash
+# String
+NAME="John Doe"
+
+# Number
+PORT=8080
+
+# Boolean (interpreted as string)
+DEBUG=true
+
+# Empty
+EMPTY=
+
+# Path
+PATH=/usr/local/bin:$PATH
+
+# URL
+API_URL=https://api.example.com
+
+# JSON (as string)
+CONFIG='{"key": "value"}'
+
+# Multi-line
+CERT="-----BEGIN CERTIFICATE-----
+MIICWDCCAcGgAwIBAgIJAKe0yZE6xcJ2MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+...
+-----END CERTIFICATE-----"
+```
+
+## Variable Precedence
+
+Variables are loaded in this order (later overrides earlier):
+
+1. System environment variables
+2. Global environment file (`.env`)
+3. Command-specific environment file (e.g., `.env.deploy`)
+
+## Built-in Variables
+
+Ahoy provides these variables automatically:
+
+```bash
+AHOY_CMD_ARGS     # All command arguments
+AHOY_CMD_NAME     # Current command name
+AHOY_CMD_PATH     # Path to .ahoy.yml file
+```
+
+## Common Use Cases
+
+### Database Configuration
+
+```bash
+# .env.db
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=myapp
+DB_USER=root
+DB_PASS=secret
+```
+
+```yaml
+commands:
+  mysql:
+    usage: Connect to MySQL
+    env: .env.db
+    cmd: mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+### API Configuration
+
+```bash
+# .env.api
+API_URL=https://api.example.com
+API_KEY=abc123
+API_VERSION=v1
+```
+
+```yaml
+commands:
+  api:
+    usage: Make API request
+    env: .env.api
+    cmd: curl -H "Authorization: Bearer $API_KEY" "$API_URL/$API_VERSION/users"
+```
+
+### Docker Configuration
+
+```bash
+# .env.docker
+COMPOSE_PROJECT_NAME=myapp
+COMPOSE_FILE=docker-compose.yml
+DOCKER_BUILDKIT=1
+DOCKER_REGISTRY=registry.example.com
+```
+
+```yaml
+commands:
+  up:
+    usage: Start Docker environment
+    env: .env.docker
+    cmd: docker-compose up -d
+```
+
+## Environment-Specific Configuration
+
+### Development
+
+```bash
+# .env.dev
+ENV=development
+DEBUG=true
+API_URL=http://localhost:3000
+```
+
+### Staging
+
+```bash
+# .env.staging
+ENV=staging
+DEBUG=false
+API_URL=https://staging.example.com
+```
+
+### Production
+
+```bash
+# .env.prod
+ENV=production
+DEBUG=false
+API_URL=https://api.example.com
+```
+
+## Security Best Practices
+
+### File Management
+
+1. **Gitignore Sensitive Files**
+   ```gitignore
+   # Ignore all .env files
+   .env*
+   
+   # Except example files
+   !.env.example
+   ```
+
+2. **Provide Example Files**
+   ```bash
+   # .env.example
+   DB_HOST=localhost
+   DB_USER=root
+   DB_PASS=changeme
+   ```
+
+### Variable Validation
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy application
+    env: .env.deploy
+    cmd: |
+      # Required variables
+      required_vars=(
+        "API_KEY"
+        "DEPLOY_TOKEN"
+        "ENVIRONMENT"
+      )
+      
+      # Check each required variable
+      for var in "${required_vars[@]}"; do
+        if [ -z "${!var}" ]; then
+          echo "Error: $var is not set"
+          exit 1
+        fi
+      done
+```
+
+### Sensitive Data Handling
+
+```yaml
+commands:
+  backup:
+    usage: Backup database
+    env: .env.db
+    cmd: |
+      # Don't print sensitive commands
+      set +x
+      
+      # Use variables securely
+      mysqldump -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" > backup.sql
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Variable Not Found**
+   ```bash
+   # Check if variable exists
+   if [ -z "$VARIABLE" ]; then
+     echo "Error: VARIABLE is not set"
+     exit 1
+   fi
+   ```
+
+2. **Path Issues**
+   ```yaml
+   commands:
+     check-env:
+       usage: Debug environment
+       cmd: |
+         echo "Looking for .env in:"
+         echo "$(pwd)"
+         ls -la .env*
+   ```
+
+3. **Permission Issues**
+   ```bash
+   # Check file permissions
+   if [ ! -r ".env" ]; then
+     echo "Error: Cannot read .env file"
+     exit 1
+   fi
+   ```
+
+## Best Practices
+
+### 1. Use Clear Names
+
+```bash
+# ✅ Good
+APPLICATION_NAME=myapp
+DATABASE_PASSWORD=secret
+
+# ❌ Bad
+APP=myapp
+PASS=secret
+```
+
+### 2. Document Variables
+
+```bash
+# Application configuration
+APP_NAME=myapp          # Application name used in containers
+APP_ENV=development     # Current environment (development|staging|production)
+
+# Database configuration
+DB_HOST=localhost       # Database host address
+DB_PORT=3306           # Database port number
+```
+
+### 3. Group Related Variables
+
+```bash
+# Application
+APP_NAME=myapp
+APP_ENV=development
+APP_DEBUG=true
+
+# Database
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=myapp
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+```
+
+### 4. Use Environment-Specific Files
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy to environment
+    cmd: |
+      env_file=".env.${1:-dev}"
+      if [ -f "$env_file" ]; then
+        source "$env_file"
+        ./deploy.sh
+      else
+        echo "Environment file $env_file not found"
+        exit 1
+      fi
+```
+
+## See Also
+
+- [YAML Configuration](guides/yaml-config)
+- [Command Execution](guides/command-execution)
+- [YAML Schema](reference/yaml-schema)
+- [CLI Reference](reference/cli)
