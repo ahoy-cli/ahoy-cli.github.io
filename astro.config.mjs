@@ -26,19 +26,22 @@ export default defineConfig({
             { label: 'YAML Configuration', slug: 'guides/yaml-config' },
             { label: 'Command Execution', slug: 'guides/command-execution' },
             { label: 'Importing & Overriding', slug: 'guides/importing' },
+            { label: 'Environment', slug: 'guides/environment' },
           ],
         },
         {
           label: 'Reference',
           items: [
             { label: 'CLI Reference', slug: 'reference/cli' },
+            { label: 'YAML Schema', slug: 'reference/yaml-schema' },
           ],
         },
         {
-          label: 'Examples',
+          label: 'Top',
           items: [
-            { label: 'Docker Integration', slug: 'examples/docker' },
-            { label: 'Complex Scripts', slug: 'examples/complex' },
+            { label: 'Installation', slug: 'installation' },
+            { label: 'Introduction', slug: 'introduction' },
+            { label: 'Quick Start', slug: 'quick-start' },
           ],
         },
       ],

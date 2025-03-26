@@ -96,16 +96,6 @@ Variables are loaded in this order (later overrides earlier):
 2. Global environment file (`.env`)
 3. Command-specific environment file (e.g., `.env.deploy`)
 
-## Built-in Variables
-
-Ahoy provides these variables automatically:
-
-```bash
-AHOY_CMD_ARGS     # All command arguments
-AHOY_CMD_NAME     # Current command name
-AHOY_CMD_PATH     # Path to .ahoy.yml file
-```
-
 ## Common Use Cases
 
 ### Database Configuration
@@ -162,40 +152,11 @@ commands:
     cmd: docker-compose up -d
 ```
 
-## Environment-Specific Configuration
-
-### Development
-
-```bash
-# .env.dev
-ENV=development
-DEBUG=true
-API_URL=http://localhost:3000
-```
-
-### Staging
-
-```bash
-# .env.staging
-ENV=staging
-DEBUG=false
-API_URL=https://staging.example.com
-```
-
-### Production
-
-```bash
-# .env.prod
-ENV=production
-DEBUG=false
-API_URL=https://api.example.com
-```
-
 ## Security Best Practices
 
 ### File Management
 
-1. **Gitignore Sensitive Files**
+1. **"Git ignore" Sensitive Files**
    ```gitignore
    # Ignore all .env files
    .env*
