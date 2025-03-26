@@ -8,7 +8,7 @@ hero:
     file: ../../assets/ahoy-logo.svg
   actions:
     - text: Get Started
-      link: /introduction
+      link: /guides/getting-started
       icon: right-arrow
       variant: primary
     - text: View on GitHub
@@ -17,6 +17,13 @@ hero:
 ---
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Icon } from '@astrojs/starlight/components';
+
+## What is Ahoy?
+
+Ahoy is a powerful, flexible command-line tool that transforms how teams manage and execute project workflows. By using simple YAML configuration files, Ahoy allows you to create self-documenting CLI programs that can be easily shared across your entire development team.
+
+Whether you're working on a small personal project or managing a complex enterprise application, Ahoy simplifies command management and reduces friction in your development process.
 
 ## Why Ahoy?
 
@@ -34,3 +41,39 @@ import { Card, CardGrid } from '@astrojs/starlight/components';
 		First-class support for Docker environments and containerized workflows.
 	</Card>
 </CardGrid>
+
+## Getting Started Guides
+
+Dive deeper into Ahoy with our comprehensive guides:
+
+<CardGrid>
+	<Card title="Installation" icon="setting">
+		<a href="/guides/getting-started">
+			Learn how to install Ahoy and set up your first project
+			<Icon name="right-arrow" />
+		</a>
+	</Card>
+	<Card title="Shell Autocompletion" icon="keyboard">
+		<a href="/guides/shell-autocompletion">
+			Configure shell autocompletion for a smoother CLI experience
+			<Icon name="right-arrow" />
+		</a>
+	</Card>
+	<Card title="Environment Variables" icon="variable">
+		<a href="/guides/environment-variables">
+			Master environment variable handling in Ahoy
+			<Icon name="right-arrow" />
+		</a>
+	</Card>
+</CardGrid>
+
+## Use Cases
+
+Ahoy is incredibly versatile and can be used in various scenarios:
+
+- **Development Workflows**: Standardize project setup, build, and deployment commands
+- **DevOps Automation**: Create consistent scripts across different environments
+- **Team Collaboration**: Share and document project-specific CLI commands
+- **Containerized Environments**: Seamlessly work with Docker and other containerization tools
+
+Ready to streamline your project workflows? [Get Started](/guides/getting-started) with Ahoy today!

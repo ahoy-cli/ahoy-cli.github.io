@@ -1,5 +1,169 @@
 ---
 title: CLI Reference
+description: Comprehensive reference for the Ahoy CLI tool
+---
+
+# CLI Reference
+## Overview
+
+Ahoy is a CLI tool that helps you create self-documenting command-line interfaces by defining commands in YAML configuration files. This reference covers all available commands, global flags, and usage patterns.
+
+## Global Flags
+
+Ahoy supports several global flags that can be used with most commands:
+
+- `--ahoy-file`: Specify a custom path to the Ahoy YAML configuration file
+  ```bash
+  ahoy --ahoy-file /path/to/custom/ahoyfile.yml
+  ```
+
+- `--verbose` or `-v`: Enable verbose output for more detailed logging
+  ```bash
+  ahoy --verbose command
+  ```
+
+- `--help` or `-h`: Display help information for any command
+  ```bash
+  ahoy --help
+  ahoy command --help
+  ```
+
+## Core Commands
+
+### `ahoy init`
+
+Initialize a new Ahoy configuration in the current directory.
+
+<Tabs>
+<TabItem label="Usage">
+```bash
+ahoy init
+```
+</TabItem>
+<TabItem label="Description">
+Creates a starter `ahoy.yml` file with example configurations to help you get started.
+</TabItem>
+</Tabs>
+
+### `ahoy list`
+
+List all available commands defined in the current Ahoy configuration.
+
+<Tabs>
+<TabItem label="Usage">
+```bash
+ahoy list
+```
+</TabItem>
+<TabItem label="Description">
+Displays all commands defined in the `ahoy.yml` file, along with their descriptions.
+</TabItem>
+</Tabs>
+
+### `ahoy run`
+
+Execute a specific command defined in the Ahoy configuration.
+
+<Tabs>
+<TabItem label="Usage">
+```bash
+ahoy run <command-name>
+```
+</TabItem>
+<TabItem label="Example">
+```bash
+ahoy run build
+ahoy run test
+```
+</TabItem>
+<TabItem label="Description">
+Runs the specified command as defined in the Ahoy YAML configuration. Supports command interpolation and environment variable substitution.
+</TabItem>
+</Tabs>
+
+### `ahoy doctor`
+
+Perform a diagnostic check on your Ahoy configuration.
+
+<Tabs>
+<TabItem label="Usage">
+```bash
+ahoy doctor
+```
+</TabItem>
+<TabItem label="Description">
+Validates the Ahoy YAML configuration, checks for potential issues, and provides recommendations.
+</TabItem>
+</Tabs>
+
+## Advanced Usage
+
+### Environment Variable Support
+
+Ahoy supports environment variable interpolation in command definitions:
+
+```yaml
+commands:
+  deploy:
+    cmd: "docker deploy ${DEPLOY_TARGET}"
+```
+
+You can set environment variables before running Ahoy commands to customize behavior.
+
+### Importing Configurations
+
+Ahoy supports importing and extending configurations from multiple YAML files:
+
+```yaml
+imports:
+  - docker.yml
+  - testing.yml
+```
+
+## Best Practices
+
+- Keep your Ahoy configuration files version-controlled
+- Use descriptive command names and include helpful descriptions
+- Leverage environment variables for flexible configuration
+- Use imports to modularize and share command definitions across projects
+
+## Troubleshooting
+
+- If a command fails, use the `--verbose` flag for more detailed error information
+- Ensure all referenced scripts and commands are executable
+- Check that required dependencies are installed
+
+## Examples
+
+<Tabs>
+<TabItem label="Docker Project">
+```bash
+# List available commands
+ahoy list
+
+# Run a build command
+ahoy run build
+
+# Deploy with a specific environment
+DEPLOY_ENV=staging ahoy run deploy
+```
+</TabItem>
+<TabItem label="Web Development">
+```bash
+# Install dependencies
+ahoy run install
+
+# Start development server
+ahoy run dev
+
+# Run tests
+ahoy run test
+```
+</TabItem>
+</Tabs>
+
+---
+title: CLI Reference
 description: Complete reference for the Ahoy command-line interface
 ---
 
