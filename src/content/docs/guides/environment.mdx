@@ -89,7 +89,7 @@ commands:
 </TabItem>
 </Tabs>
 
-<Aside type="important">
+<Aside type="caution">
   When a variable exists in both the global and command-specific environment files, the command-specific one takes precedence.
 </Aside>
 
@@ -157,7 +157,7 @@ commands:
 
 ### Docker Development Environment
 
-Create a specialized environment file for Docker:
+Create a specialised environment file for Docker:
 
 ```bash
 # .env.docker
@@ -249,4 +249,97 @@ Run it with: `ahoy deploy staging`
 <TabItem label="Variable Not Found">
 Check that:
 - Your environment file exists and is correctly referenced in the `.ahoy.yml`
-- The path is relative to where
+- The path is relative to where you're running the `ahoy` command
+- The variable name is spelled correctly (including case)
+- There are no syntax errors in your environment file
+- You're not overriding the variable elsewhere
+
+Try running your command with debug mode to see what environment variables are being loaded:
+```bash
+AHOY_VERBOSE=true ahoy your-command
+```
+</TabItem>
+
+<TabItem label="Permission Issues">
+If you're getting permission errors:
+- Make sure your environment files have the correct permissions
+  ```bash
+  chmod 600 .env* # Makes the files readable only by you
+  ```
+- Check that the user running the `ahoy` command has permission to read the environment files
+- If you're in a Docker container, ensure volumes are mounted correctly
+</TabItem>
+
+<TabItem label="Values With Special Characters">
+Special characters in environment values can cause problems:
+- Wrap values with quotes if they contain spaces or special characters
+  ```bash
+  # Bad
+  MESSAGE=Hello, World!
+  
+  # Good
+  MESSAGE="Hello, World!"
+  ```
+- Be careful with quotes and escape sequences in variable values
+- If a command uses the variable in a shell context, consider additional escaping:
+  ```yaml
+  commands:
+    echo:
+      cmd: |
+        # Escape quotes for shell execution
+        echo "${MESSAGE//\"/\\\"}"
+  ```
+</TabItem>
+
+<TabItem label="Multiple Environment Files">
+When using multiple environment files:
+- Remember that command-specific environment files override global ones
+- Files are not merged; they replace each other
+- If a command has its own `env` property, the global `env` is ignored
+- Debug environment loading with `AHOY_VERBOSE=true`
+</TabItem>
+</Tabs>
+
+## Advanced Usage
+
+### Overriding Variables at Runtime
+
+You can override environment variables directly from the command line:
+
+```bash
+DB_NAME=custom_db ahoy mysql
+```
+
+This is useful for one-off tasks without modifying your environment files.
+
+### Using Environment Variables in YAML
+
+You can use environment variables directly in your YAML file by using the `$VARIABLE` syntax:
+
+```yaml
+ahoyapi: v2
+env: .env
+
+commands:
+  create-db:
+    usage: Create a new database
+    cmd: echo "Creating database $DB_NAME"
+  
+  connect:
+    usage: Connect to database
+    # Use the CLI tool specified in an environment variable
+    cmd: $DB_CLIENT -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+## Conclusion
+
+Environment variables provide a powerful way to make your Ahoy commands flexible, secure, and adaptable to different scenarios. By following the practices in this guide, you can:
+
+- Keep sensitive information secure
+- Create reusable commands that work across environments
+- Simplify your workflow with environment-specific configurations
+- Build more maintainable scripts
+
+Remember that good environment variable management is key to creating an effective Ahoy workflow. Start with simple usage patterns, document your environment requirements, and gradually introduce more advanced techniques as your projects grow.
+
+For more detailed technical information about environment variables in Ahoy, check out the [Environment Variables Reference](/reference/environment/).
