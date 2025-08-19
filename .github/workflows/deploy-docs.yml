@@ -1,0 +1,144 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: ['main', 'develop', 'staging']
+  pull_request:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: 'docs-${{ github.ref }}'
+  cancel-in-progress: true
+
+env:
+  # Determine deployment environment based on branch
+  DEPLOY_ENV: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      deploy-env: ${{ env.DEPLOY_ENV }}
+      base-url: ${{ steps.base-url.outputs.url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Pages (production only)
+        if: github.ref_name == 'main'
+        id: pages
+        uses: actions/configure-pages@v4
+
+      - name: Determine base URL
+        id: base-url
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "url=" >> $GITHUB_OUTPUT
+          else
+            echo "url=/docs-${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build documentation
+        run: npm run build
+        env:
+          # Set base URL for non-production builds
+          BASE_URL: ${{ steps.base-url.outputs.url }}
+
+      - name: Upload artifact (production)
+        if: github.ref_name == 'main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Upload artifact (staging)
+        if: github.ref_name != 'main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-${{ github.ref_name }}
+          path: ./dist
+          retention-days: 30
+
+  deploy-production:
+    if: github.ref_name == 'main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  deploy-staging:
+    if: github.ref_name != 'main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout gh-pages
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Download staging artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-${{ github.ref_name }}
+          path: ./temp-staging
+
+      - name: Deploy to staging directory
+        run: |
+          # Create staging directory
+          mkdir -p docs-${{ github.ref_name }}
+          
+          # Copy built docs to staging directory
+          cp -r temp-staging/* docs-${{ github.ref_name }}/
+          
+          # Clean up temp directory
+          rm -rf temp-staging
+          
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit changes
+          git add docs-${{ github.ref_name }}
+          git commit -m "Deploy staging docs for ${{ github.ref_name }}" || exit 0
+          git push
+
+      - name: Comment on PR with staging link
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const stagingUrl = `https://ahoy-cli.github.io/docs-${{ github.ref_name }}/`;
+            const comment = `📖 **Documentation Preview**
+            
+            Staging documentation is available at: ${stagingUrl}
+            
+            This preview will be updated automatically with new commits to this branch.`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
