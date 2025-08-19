@@ -1,0 +1,79 @@
+---
+title: Welcome to Ahoy
+description: Get started with Ahoy - a powerful, YAML-based CLI task runner
+template: doc
+hero:
+  tagline: Create self-documenting CLI programs with ease, using YAML files in your source tree
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Get Started
+      link: /guides/getting-started
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/ahoy-cli/ahoy
+      icon: external
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Icon } from '@astrojs/starlight/components';
+
+## What is Ahoy?
+
+Ahoy is a powerful, flexible command-line tool that transforms how teams manage and execute project workflows. By using simple YAML configuration files, Ahoy allows you to create self-documenting CLI programs that can be easily shared across your entire development team.
+
+Whether you're working on a small personal project or managing a complex enterprise application, Ahoy simplifies command management and reduces friction in your development process.
+
+## Why use Ahoy?
+
+<CardGrid stagger>
+	<Card title="Simple YAML Configuration" icon="document">
+		Define your CLI commands in simple YAML files. No coding required!
+	</Card>
+	<Card title="Self-Documenting" icon="open-book">
+		Your YAML configuration automatically generates help text and documentation.
+	</Card>
+	<Card title="Powerful Features" icon="rocket">
+		Environment variables, command composition, and powerful overrides give you flexibility.
+	</Card>
+	<Card title="Docker Ready" icon="seti:docker">
+		First-class support for Docker environments and containerised workflows.
+	</Card>
+</CardGrid>
+
+## Getting Started Guides
+
+Dive deeper into Ahoy with our comprehensive guides:
+
+<CardGrid>
+	<Card title="Installation" icon="seti:go">
+		<a href="/guides/getting-started">
+			Learn how to install Ahoy and set up your first project
+			<Icon name="right-arrow" />
+		</a>
+	</Card>
+	<Card title="Shell Autocompletion" icon="seti:shell">
+		<a href="/guides/shell-autocompletion">
+			Configure shell autocompletion for a smoother CLI experience
+			<Icon name="right-arrow" />
+		</a>
+	</Card>
+	<Card title="Environment Variables" icon="setting">
+		<a href="/guides/environment-variables">
+			Master environment variable handling in Ahoy
+			<Icon name="right-arrow" />
+		</a>
+	</Card>
+</CardGrid>
+
+## Use Cases
+
+Ahoy is incredibly versatile and can be used in various scenarios:
+
+- **Development Workflows**: Standardise project setup, build, and deployment commands
+- **DevOps Automation**: Create consistent scripts across different environments
+- **Team Collaboration**: Share and document project-specific CLI commands
+- **Containerised Environments**: Seamlessly work with Docker and other containerization tools
+
+Ready to streamline your project workflows? [Get Started](/guides/getting-started) with Ahoy today!

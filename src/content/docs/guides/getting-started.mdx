@@ -1,0 +1,139 @@
+---
+title: Getting Started with Ahoy
+description: Learn how to install and use Ahoy for your project
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import { Steps } from '@astrojs/starlight/components';
+import { Aside } from '@astrojs/starlight/components';
+
+# Getting Started with Ahoy
+
+Welcome to Ahoy! This guide will help you install Ahoy and create your first commands.
+
+## Installation
+
+<Tabs>
+  <TabItem label="macOS">
+    ```bash
+    brew install ahoy
+    ```
+  </TabItem>
+  <TabItem label="Linux">
+    ```bash
+    os=$(uname -s | tr '[:upper:]' '[:lower:]') && architecture=$(case $(uname -m) in x86_64 | amd64) echo "amd64" ;; aarch64 | arm64 | armv8) echo "arm64" ;; *) echo "amd64" ;; esac) && sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
+    ```
+
+    Alternatively, you can:
+    1. Download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases)
+    2. Move the appropriate binary for your platform into a directory in your $PATH
+    3. Rename it to `ahoy`
+    4. Make it executable with `chmod +x /path/to/ahoy`
+  </TabItem>
+  <TabItem label="Windows (WSL2)">
+    Use the Linux installation instructions above, selecting the appropriate architecture for your system.
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  After installation, run `ahoy` to verify it's working. You should see the help information.
+</Aside>
+
+## Creating Your First Ahoy File
+
+<Steps>
+1. Create a new file named `.ahoy.yml` in your project root:
+
+   ```yaml
+   ahoyapi: v2
+   
+   commands:
+     hello:
+       usage: Say hello to the world
+       cmd: echo "Hello, World!"
+     
+     list-files:
+       usage: List files in the current directory
+       cmd: ls -la
+   ```
+
+2. Run `ahoy` in your project directory to see your available commands:
+
+   ```
+   NAME:
+      ahoy - Create self-documenting CLI programs from YAML files
+   
+   USAGE:
+      ahoy [global options] command [command options] [arguments...]
+   
+   COMMANDS:
+      hello       Say hello to the world
+      list-files  List files in the current directory
+      help, h     Shows a list of commands or help for one command
+   ```
+
+3. Run your first command:
+
+   ```bash
+   ahoy hello
+   ```
+
+   This will output: `Hello, World!`
+</Steps>
+
+## Ahoy Features
+
+<CardGrid>
+  <Card title="Command Templates" icon="setting">
+    Use regular `bash` syntax like `"$@"` for all arguments, or `$1` for the first argument.
+  </Card>
+  <Card title="Environment Variables" icon="puzzle">
+    Set environment variables at both file and command level using the `env` field.
+  </Card>
+  <Card title="Command Aliases" icon="star">
+    Define alternative names for your commands to make them more convenient to use.
+  </Card>
+  <Card title="Import Config Files" icon="document">
+    Import multiple config files to organise your commands across multiple files.
+  </Card>
+</CardGrid>
+
+## Basic Example
+
+Here's a simple example of how Ahoy can make complex commands easier to use:
+
+**Without Ahoy**:
+```bash
+docker exec -i $(docker-compose ps -q cli) bash -c 'mysql -u$DB_ENV_MYSQL_USER -p$DB_ENV_MYSQL_PASSWORD -h$DB_PORT_3306_TCP_ADDR $DB_ENV_MYSQL_DATABASE' < some-database.sql
+```
+
+**With Ahoy**:
+```bash
+ahoy mysql-import < some-database.sql
+```
+
+Here's how you'd set that up in your `.ahoy.yml` file:
+
+```yaml
+ahoyapi: v2
+
+commands:
+  mysql-import:
+    usage: Import a MySQL database
+    cmd: |
+      docker exec -i $(docker-compose ps -q cli) bash -c 'mysql -u$DB_ENV_MYSQL_USER -p$DB_ENV_MYSQL_PASSWORD -h$DB_PORT_3306_TCP_ADDR $DB_ENV_MYSQL_DATABASE' < $1
+```
+
+<Aside type="note">
+  Commands always run relative to the `.ahoy.yml` file, but can be called from any subfolder in your project.
+</Aside>
+
+## Next Steps
+
+Now that you have Ahoy installed and understand the basics, you might want to:
+
+- Learn about [advanced configuration options](/reference/cli)
+- Set up [shell autocompletions](/guides/shell-autocompletion) for more efficient workflow
+- Explore [environment variables](/guides/environment-variables) to make your commands more flexible
+
