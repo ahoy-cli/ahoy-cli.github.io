@@ -5,6 +5,8 @@ description: Complete technical reference for the Ahoy YAML configuration schema
 
 # YAML Schema Reference
 
+import { Badge } from '@astrojs/starlight/components';
+
 This technical reference documents the complete schema for Ahoy YAML configuration files. It details all supported fields, validation rules, and implementation details as defined in the Ahoy codebase.
 ## YAML File Format
 
@@ -23,7 +25,7 @@ The Ahoy configuration schema consists of two main data structures:
 # Required: API version declaration
 ahoyapi: v2
 
-# Optional: Global environment file
+# Optional: Global environment file (v2.3.0+)
 env: .env
 
 # Optional: Custom command interpreter
@@ -71,24 +73,36 @@ ahoyapi: v2
 usage: "Collection of commands for the project"
 ```
 
-### `env`
+### `env` <Badge text="v2.3.0+" variant="tip" />
 
 **Required**: No  
-**Type**: String  
+**Type**: String or Array of Strings  
 **Default**: None  
 **Implementation**: Processed in `getCommands()` function  
-**Description**: Path to a global environment file, relative to the YAML file location. Environment variables defined here are available to all commands in this configuration file.
+**Description**: Path(s) to global environment file(s), relative to the YAML file location. Environment variables defined here are available to all commands in this configuration file. Supports both single file and multiple files syntax.
 
+**Single Environment File (backwards compatible)**:
 ```yaml
 env: .env
 env: .env.local
 env: ../shared/config.env
 ```
 
+**Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+```yaml
+env:
+  - .env.base
+  - .env.local
+  - .env.override
+```
+
 **Technical Details**: 
 - Environment variables are loaded at runtime and passed to command processes
+- When using multiple files, they are loaded in order with later files overriding earlier ones
 - Blank lines and lines starting with '#' are ignored
-- Variables from the global file can be overridden by command-specific environment files
+- Variables from global files can be overridden by command-specific environment files
+- Non-existent files are gracefully ignored
+- Maintains full backwards compatibility with single file syntax
 
 ### `entrypoint`
 
@@ -133,17 +147,42 @@ Each command defined under `commands` can have the following fields:
 **Type**: String  
 **Default**: Empty  
 **Implementation**: Set in CLI command setup in `getCommands()`  
-**Description**: Help text shown when running `ahoy help command-name`. This is displayed in the command listing and help output.
+**Description**: Short help text shown when running `ahoy help command-name`. This appears as a brief summary in the command listing.
 
 ```yaml
 commands:
   example:
-    usage: |
-      Description of what this command does
+    usage: Brief description of what this command does
+```
+
+### `description`
+
+**Required**: No  
+**Type**: String  
+**Default**: Empty  
+**Implementation**: Set in CLI command setup in `getCommands()`  
+**Description**: Longer, detailed description shown when running `ahoy help command-name`. This is displayed below the usage text and supports multi-line content for comprehensive documentation.
+
+```yaml
+commands:
+  example:
+    usage: Deploy the application
+    description: |
+      Deploy the application to the specified environment.
+      
+      This command will:
+      - Build the application
+      - Run tests
+      - Deploy to the target environment
+      - Send notifications
       
       Arguments:
-        $1: First argument
-        $2: Second argument
+        $1: Environment (dev|staging|prod)
+        $2: Version tag (optional)
+      
+      Examples:
+        ahoy deploy dev v1.0.0
+        ahoy deploy prod
 ```
 
 ### `cmd`
@@ -171,7 +210,7 @@ commands:
 - Has access to environment variables from both global and command-specific env files
 - Working directory is set to the directory containing the YAML file
 
-### `aliases`
+### `aliases` <Badge text="v2.2.0+" variant="tip" />
 
 **Required**: No  
 **Type**: Array of Strings  
@@ -214,14 +253,15 @@ commands:
 - Commands from the imported files become subcommands under this command
 - Imported files must also use `ahoyapi: v2`
 
-### `env`
+### `env` <Badge text="v2.3.0+" variant="tip" />
 
 **Required**: No  
-**Type**: String  
+**Type**: String or Array of Strings  
 **Default**: None  
 **Implementation**: Processed in command action  
-**Description**: Path to a command-specific environment file, relative to the YAML file location. Variables defined here override any with the same name in the global env file.
+**Description**: Path(s) to command-specific environment file(s), relative to the YAML file location. Variables defined here override any with the same name in the global env files. Supports both single file and multiple files syntax.
 
+**Single Environment File (backwards compatible)**:
 ```yaml
 commands:
   deploy:
@@ -229,6 +269,24 @@ commands:
     env: .env.deploy
     cmd: ./deploy.sh
 ```
+
+**Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+```yaml
+commands:
+  deploy:
+    usage: Deploy application
+    env:
+      - .env.deploy
+      - .env.staging
+      - .env.secrets
+    cmd: ./deploy.sh
+```
+
+**Technical Details**:
+- When using multiple files, they are loaded in order with later files overriding earlier ones
+- Command-specific environment files always override global environment files
+- Non-existent files are gracefully ignored
+- Maintains full backwards compatibility with single file syntax
 
 ### `hide`
 
@@ -246,7 +304,7 @@ commands:
     cmd: ./internal-script.sh
 ```
 
-### `optional`
+### `optional` <Badge text="v2.2.0+" variant="tip" />
 
 **Required**: No  
 **Type**: Boolean  
@@ -280,24 +338,38 @@ commands:
   # Basic command
   hello:
     usage: Say hello to someone
+    description: |
+      A simple greeting command that demonstrates basic argument usage.
+      
+      Arguments:
+        $1: Name to greet
     cmd: echo "Hello, $1!"
     aliases: ["hi", "greet"]
 
   # Command with custom environment
   db:
     usage: Database operations
+    description: Connect to the database using credentials from environment file
     env: .env.db
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 
   # Command with imports
   dev:
     usage: Development commands
+    description: Collection of development-related commands imported from external files
     imports:
       - ./dev.ahoy.yml
 
   # Multi-line command
   setup:
     usage: Set up project
+    description: |
+      Complete project setup including dependency installation.
+      
+      This command will:
+      - Install Node.js dependencies
+      - Install PHP dependencies via Composer
+      - Display completion message
     cmd: |
       echo "Installing dependencies..."
       npm install
@@ -358,7 +430,7 @@ Commands have access to:
 
 ## Best Practices
 
-### YAML File Organization
+### YAML File Organisation
 
 ```yaml
 # Start with version
@@ -398,11 +470,20 @@ commands:
 
 ### Usage Documentation
 
+Use `usage` for brief descriptions and `description` for detailed documentation:
+
 ```yaml
 commands:
   deploy:
-    usage: |
-      Deploy the application to specified environment
+    usage: Deploy the application to specified environment
+    description: |
+      Deploy the application to the specified environment with optional version.
+      
+      This command performs a complete deployment including:
+      - Building the application
+      - Running tests
+      - Deploying to target environment
+      - Sending notifications
       
       Arguments:
         $1: Environment (dev|staging|prod)

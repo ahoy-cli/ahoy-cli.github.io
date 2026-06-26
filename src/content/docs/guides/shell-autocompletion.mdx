@@ -6,7 +6,7 @@ description: Set up tab completion for Ahoy commands in your shell
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 import { Steps } from '@astrojs/starlight/components';
 import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Aside } from '@astrojs/starlight/components';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
 # Shell Autocompletion
 
@@ -28,7 +28,7 @@ Ahoy supports command autocompletion (tab completion) in both Zsh and Bash. Sett
 ## Setting Up Autocompletion
 
 <Tabs>
-  <TabItem label="Zsh">
+  <TabItem label="Zsh"> <Badge text="v2.3.0+" variant="tip" size="small" />
     For Zsh users, there's a dedicated plugin available that provides robust completion support for Ahoy commands.
 
     <Steps>
@@ -45,7 +45,7 @@ Ahoy supports command autocompletion (tab completion) in both Zsh and Bash. Sett
     </Steps>
 
     <Aside type="tip">
-      If you're using Oh My Zsh, you can add `zsh-ahoy` to your plugins list in your `.zshrc` file:
+      **Zsh Plugin Added in v2.3.0**: If you're using Oh My Zsh, you can add `zsh-ahoy` to your plugins list in your `.zshrc` file:
       ```bash
       plugins=(... zsh-ahoy)
       ```

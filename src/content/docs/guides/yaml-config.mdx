@@ -3,9 +3,11 @@ title: YAML Configuration
 description: A practical guide to creating and using Ahoy YAML files
 ---
 
+import { Badge } from '@astrojs/starlight/components';
+
 # YAML Configuration Guide
 
-Ahoy's power comes from its simple, flexible YAML configuration. This practical guide will help you create effective `.ahoy.yml` files for your projects with step-by-step examples and common patterns.
+Ahoy's magic happens in those lovely YAML files. Don't worry if you've never used YAML before - it's just a really readable way to structure data. This guide will walk you through creating brilliant `.ahoy.yml` files that your team will actually want to use.
 
 ## Getting Started
 
@@ -21,6 +23,7 @@ ahoyapi: v2
 commands:
   hello:
     usage: Say hello to the world
+    description: A simple greeting command to test that everything works
     cmd: echo "Hello, World!"
 ```
 
@@ -28,7 +31,7 @@ That's it! Run `ahoy hello` and you'll see the message printed.
 
 ### 2. Add More Commands
 
-Let's add a few more practical commands:
+Let's add a few more practical commands with proper documentation:
 
 ```yaml
 ahoyapi: v2
@@ -36,14 +39,19 @@ ahoyapi: v2
 commands:
   hello:
     usage: Say hello to the world
+    description: A simple greeting command to test that everything works
     cmd: echo "Hello, World!"
   
   list:
     usage: List files in the current directory
+    description: Shows all files and directories with detailed information
     cmd: ls -la
   
   info:
     usage: Show system information
+    description: |
+      Displays useful system information including current user,
+      working directory, and timestamp
     cmd: |
       echo "User: $(whoami)"
       echo "Directory: $(pwd)"
@@ -104,7 +112,7 @@ For projects with database needs:
 
 ```yaml
 ahoyapi: v2
-env: .env
+env: .env  # v2.3.0+
 
 commands:
   db-backup:
@@ -158,13 +166,13 @@ commands:
 
 ## Creating a Command Toolkit
 
-Let's build a more comprehensive setup by organizing commands into logical groups:
+Let's build a more comprehensive setup by organising commands into logical groups:
 
 ### Step 1: Create the main `.ahoy.yml` file
 
 ```yaml
 ahoyapi: v2
-env: .env
+env: .env  # v2.3.0+
 
 usage: Project development commands
 
@@ -230,7 +238,7 @@ commands:
 
 ```yaml
 ahoyapi: v2
-env: .env.db
+env: .env.db  # v2.3.0+
 
 commands:
   backup:
@@ -273,7 +281,7 @@ Then reference these in your commands:
 
 ```yaml
 ahoyapi: v2
-env: .env
+env: .env  # v2.3.0+
 
 commands:
   status:
@@ -284,14 +292,14 @@ commands:
       echo "Database: $DB_NAME (User: $DB_USER)"
 ```
 
-### Using Different Runtime Environments
+### Using Different Runtime Environments <Badge text="v2.3.0+" variant="tip" size="small" />
 
 For different environments, create environment-specific command files:
 
 `.ahoy/staging.yml`:
 ```yaml
 ahoyapi: v2
-env: .env.staging
+env: .env.staging  # v2.3.0+
 
 commands:
   deploy:
@@ -305,7 +313,7 @@ commands:
 `.ahoy/production.yml`:
 ```yaml
 ahoyapi: v2
-env: .env.production
+env: .env.production  # v2.3.0+
 
 commands:
   deploy:
@@ -389,11 +397,11 @@ commands:
       echo "Release v$VERSION complete!"
 ```
 
-## Command Aliases and Shortcuts
+## Command Aliases and Shortcuts <Badge text="v2.2.0+" variant="tip" />
 
 Aliases make frequently used commands more accessible. Here's how to create and use them effectively:
 
-### Creating Command Aliases
+### Creating Command Aliases <Badge text="v2.2.0+" variant="tip" size="small" />
 
 ```yaml
 ahoyapi: v2
@@ -510,7 +518,7 @@ If your environment variables aren't being loaded correctly:
 
 ```yaml
 ahoyapi: v2
-env: .env
+env: .env  # v2.3.0+
 
 commands:
   env-test:

@@ -6,7 +6,7 @@ sidebar:
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Aside } from '@astrojs/starlight/components';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
 # Working with Environment Variables
 
@@ -38,7 +38,7 @@ DB_NAME=myapp
 API_KEY=local_development_key
 ```
 
-### Step 2: Configure Ahoy to Use Your Environment File
+### Step 2: Configure Ahoy to Use Your Environment File <Badge text="v2.3.0+" variant="tip" />
 
 In your `.ahoy.yml` file, specify your environment file:
 
@@ -64,10 +64,10 @@ Connecting to myapp as root
 
 ## Global vs. Command-Specific Variables
 
-Ahoy lets you set both global variables (used by all commands) and command-specific variables.
+Ahoy lets you set both global variables (used by all commands) and command-specific variables. You can use either single files or multiple files for both.
 
 <Tabs>
-<TabItem label="Global Variables">
+<TabItem label="Single Environment File">
 ```yaml
 ahoyapi: v2
 env: .env  # Applied to all commands
@@ -76,21 +76,39 @@ commands:
   db:
     usage: Show database info
     cmd: echo "DB: $DB_NAME, User: $DB_USER"
-```
-</TabItem>
-<TabItem label="Command-Specific Variables">
-```yaml
-commands:
+  
   prod-db:
     usage: Show production database info
     env: .env.production  # Only applied to this command
     cmd: echo "PROD DB: $DB_NAME, User: $DB_USER"
 ```
 </TabItem>
+<TabItem label="Multiple Environment Files">
+<Badge text="v2.5.0+" variant="note" /> **New Feature**
+
+```yaml
+ahoyapi: v2
+# Multiple global files loaded in order
+env:
+  - .env.base
+  - .env.local
+  - .env.override
+
+commands:
+  deploy:
+    usage: Deploy to staging
+    # Multiple command-specific files
+    env:
+      - .env.deploy
+      - .env.staging
+      - .env.secrets
+    cmd: ./deploy.sh
+```
+</TabItem>
 </Tabs>
 
-<Aside type="caution">
-  When a variable exists in both the global and command-specific environment files, the command-specific one takes precedence.
+<Aside type="tip">
+  **Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />: Files are loaded in order, with later files overriding earlier ones. Command-specific files always override global files. This feature maintains full backwards compatibility with single file syntax.
 </Aside>
 
 ## Environment File Formats
@@ -299,6 +317,113 @@ When using multiple environment files:
 - Debug environment loading with `AHOY_VERBOSE=true`
 </TabItem>
 </Tabs>
+
+## Multiple Environment Files <Badge text="v2.5.0+" variant="note" />
+
+Ahoy supports loading multiple environment files (added in v2.5.0), which is perfect for layered configuration setups.
+
+### Basic Multiple Files Usage <Badge text="v2.5.0+" variant="tip" size="small" />
+
+```yaml
+ahoyapi: v2
+
+# Load multiple files in order
+env:
+  - .env.base      # Base configuration
+  - .env.local     # Local overrides
+  - .env.override  # Final overrides
+
+commands:
+  start:
+    usage: Start with layered configuration
+    cmd: echo "Starting with DB: $DB_NAME, Port: $PORT"
+```
+
+### Practical Example: Environment Layers
+
+Create these environment files:
+
+<Tabs>
+<TabItem label=".env.base">
+```bash
+# Base configuration for all environments
+APP_NAME=MyApp
+DB_HOST=localhost
+DB_PORT=3306
+DEBUG=false
+```
+</TabItem>
+<TabItem label=".env.local">
+```bash
+# Local development overrides
+DEBUG=true
+DB_NAME=myapp_dev
+API_URL=http://localhost:8080
+```
+</TabItem>
+<TabItem label=".env.override">
+```bash
+# Final overrides (maybe from CI/CD)
+DB_PASSWORD=local_dev_password
+```
+</TabItem>
+</Tabs>
+
+With this setup, the final configuration will be:
+- `APP_NAME=MyApp` (from base)
+- `DB_HOST=localhost` (from base)
+- `DEBUG=true` (overridden by local)
+- `DB_NAME=myapp_dev` (from local)
+- `DB_PASSWORD=local_dev_password` (from override)
+
+### Command-Specific Multiple Files <Badge text="v2.5.0+" variant="tip" size="small" />
+
+```yaml
+ahoyapi: v2
+
+env:
+  - .env.base
+  - .env.local
+
+commands:
+  deploy-staging:
+    usage: Deploy to staging environment
+    env:
+      - .env.deploy      # Deployment-specific config
+      - .env.staging     # Staging environment config
+      - .env.secrets     # Sensitive staging credentials
+    cmd: ./deploy.sh staging
+
+  deploy-production:
+    usage: Deploy to production environment
+    env:
+      - .env.deploy      # Same deployment config
+      - .env.production  # Production environment config
+      - .env.prod-secrets # Production credentials
+    cmd: ./deploy.sh production
+```
+
+### Benefits of Multiple Files
+
+1. **Separation of Concerns**: Keep different types of configuration separate
+2. **Environment Inheritance**: Base configuration with environment-specific overrides
+3. **Security**: Keep secrets in separate files that can be managed differently
+4. **Team Collaboration**: Share base config while allowing personal overrides
+5. **CI/CD Integration**: Layer in build-specific configuration
+
+### File Loading Order <Badge text="v2.5.0+" variant="tip" size="small" />
+
+Files are processed in the order specified, with later files overriding earlier ones:
+
+```yaml
+env:
+  - .env.defaults    # 1st: Default values
+  - .env.shared      # 2nd: Shared team config (overrides defaults)
+  - .env.local       # 3rd: Personal config (overrides shared)
+  - .env.override    # 4th: Final overrides (overrides everything)
+```
+
+If the same variable appears in multiple files, the last one wins.
 
 ## Advanced Usage
 

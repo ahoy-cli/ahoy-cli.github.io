@@ -4,9 +4,9 @@ description: Complete technical reference for environment variables in Ahoy
 ---
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Aside } from '@astrojs/starlight/components';
+import { Aside, Badge } from '@astrojs/starlight/components';
 
-# Environment Variables Reference
+# Environment Variables Reference <Badge text="v2.3.0+" variant="tip" />
 
 This reference provides a comprehensive technical guide to environment variables in Ahoy, including implementation details, supported formats, precedence rules, and advanced usage patterns.
 
@@ -22,24 +22,42 @@ Key implementation facts:
 - All environment files are relative to the location of the `.ahoy.yml` file
 - Variable resolution follows a precise override chain (system → global → command-specific)
 
-### Environment File Locations and Resolution
+### Environment File Locations and Resolution <Badge text="v2.3.0+" variant="tip" size="small" />
 
-#### Global Environment File
+#### Global Environment Files
 
 Specified at the top level of your `.ahoy.yml`:
 
+<Tabs>
+<TabItem label="Single File (backwards compatible)">
 ```yaml
 ahoyapi: v2
-env: .env  # Path is relative to the location of .ahoy.yml
+env: .env  # Path is relative to the location of .ahoy.yml (v2.3.0+)
 
 commands:
   # All commands can access variables from .env
 ```
+</TabItem>
+<TabItem label="Multiple Files"> <Badge text="v2.5.0+" variant="note" size="small" />
+```yaml
+ahoyapi: v2
+env:
+  - .env.base     # Loaded first
+  - .env.local    # Overrides base
+  - .env.override # Final overrides
 
-#### Command-Specific Environment File
+commands:
+  # All commands can access variables from all files
+```
+</TabItem>
+</Tabs>
+
+#### Command-Specific Environment Files
 
 Specified within individual commands:
 
+<Tabs>
+<TabItem label="Single File">
 ```yaml
 commands:
   deploy:
@@ -47,10 +65,24 @@ commands:
     env: .env.deploy  # Path is relative to the location of .ahoy.yml
     cmd: ./deploy.sh
 ```
+</TabItem>
+<TabItem label="Multiple Files">
+```yaml
+commands:
+  deploy:
+    usage: Deploy application
+    env:
+      - .env.deploy   # Deployment config
+      - .env.staging  # Environment-specific
+      - .env.secrets  # Sensitive data
+    cmd: ./deploy.sh
+```
+</TabItem>
+</Tabs>
 
 ### File Path Resolution Logic
 
-Environment file paths are always relative to the directory containing the `.ahoy.yml` file, not the current working directory. This ensures consistent behavior regardless of where the command is executed from.
+Environment file paths are always relative to the directory containing the `.ahoy.yml` file, not the current working directory. This ensures consistent behaviour regardless of where the command is executed from.
 
 From the implementation in `ahoy.go`:
 
@@ -364,7 +396,7 @@ if cmd.Env != "" {
 
 Since later definitions with the same name override earlier ones, this implements the precedence chain.
 
-### Variable Merging Behavior
+### Variable Merging Behaviour
 
 When merging environment variables from multiple sources:
 
@@ -476,7 +508,7 @@ Ahoy terminates with a fatal error if it cannot find or read a specified environ
 Lines in `.env` files that don't conform to the expected format are processed as follows:
 
 1. Lines without an `=` character are added to the environment verbatim
-2. This may cause unexpected behavior in the shell
+2. This may cause unexpected behaviour in the shell
 3. No syntax validation is performed beyond basic trimming and comment handling
 
 Example of potentially problematic syntax:
@@ -518,7 +550,7 @@ Environment files should be UTF-8 encoded. Other encodings may cause:
 
 1. Non-ASCII characters to be improperly interpreted
 2. Command failures with encoding-related errors
-3. Unexpected behavior when passing values to processes
+3. Unexpected behaviour when passing values to processes
 
 ## Technical Troubleshooting
 
@@ -632,7 +664,7 @@ Very large environment files (multiple megabytes) may impact:
 
 **Best practice**: Keep environment files under 100KB for optimal performance.
 
-### Environment File Organization
+### Environment File Organisation
 
 For complex projects with many variables, consider:
 
@@ -658,7 +690,7 @@ project/
 ├── .env.services         # Service configuration
 ```
 
-3. **Command-Specific Organization**: Create dedicated environment files for specific commands:
+3. **Command-Specific Organisation**: Create dedicated environment files for specific commands:
 
 ```yaml
 commands:
@@ -686,7 +718,7 @@ project/
 
 ### Implementation Technical Details
 
-When organizing files, remember these technical implementation facts:
+When organising files, remember these technical implementation facts:
 
 1. Ahoy resolves file paths relative to the `.ahoy.yml` file location
 2. No automatic directory traversal or parent directory lookup occurs

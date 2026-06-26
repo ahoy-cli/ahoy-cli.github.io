@@ -5,7 +5,7 @@ template: doc
 hero:
   tagline: Create self-documenting CLI programs with ease, using YAML files in your source tree
   image:
-    file: ../../assets/houston.webp
+    file: ../../assets/ahoy-hero.webp
   actions:
     - text: Get Started
       link: /guides/getting-started
@@ -21,26 +21,68 @@ import { Icon } from '@astrojs/starlight/components';
 
 ## What is Ahoy?
 
-Ahoy is a powerful, flexible command-line tool that transforms how teams manage and execute project workflows. By using simple YAML configuration files, Ahoy allows you to create self-documenting CLI programs that can be easily shared across your entire development team.
+Ahoy is a brilliant little command-line tool that turns project chaos into organised workflows. Using simple YAML configuration files, you can create self-documenting CLI programs that your entire team can actually use and understand.
 
-Whether you're working on a small personal project or managing a complex enterprise application, Ahoy simplifies command management and reduces friction in your development process.
+Think of it as your project's personal command centre - no coding required, no dependencies to worry about, just straightforward configuration that makes your development life easier.
+
+Ahoy transforms complex commands like this:
+
+```bash
+docker-compose exec --user=82 web drush cache:rebuild --uri=https://example.com
+```
+
+Into this:
+
+```bash
+ahoy cr
+```
+
+Whether you're juggling a personal side project or wrestling with enterprise complexity, Ahoy cuts through the noise and makes your development process actually enjoyable.
 
 ## Why use Ahoy?
 
 <CardGrid stagger>
-	<Card title="Simple YAML Configuration" icon="document">
-		Define your CLI commands in simple YAML files. No coding required!
+	<Card title="Simple Setup" icon="document">
+		Just write some YAML - that's it! No programming, no complex configs, no fuss.
 	</Card>
-	<Card title="Self-Documenting" icon="open-book">
-		Your YAML configuration automatically generates help text and documentation.
+	<Card title="Self-Documenting Magic" icon="open-book">
+		Your commands automatically get help text and documentation. Your future self will thank you.
 	</Card>
-	<Card title="Powerful Features" icon="rocket">
-		Environment variables, command composition, and powerful overrides give you flexibility.
+	<Card title="Powerful & Extensible" icon="rocket">
+		Environment variables, command composition, aliases, multiple files - it's got everything you need.
 	</Card>
-	<Card title="Docker Ready" icon="seti:docker">
-		First-class support for Docker environments and containerised workflows.
+	<Card title="Docker's Best Friend" icon="seti:docker">
+		Turn impossible Docker commands into something humans can actually remember and use.
 	</Card>
 </CardGrid>
+
+## Quick Start with Examples
+
+Get started immediately with our comprehensive examples file:
+
+```bash
+# Initialise with ready-to-use commands
+ahoy init
+```
+
+This gives you **30+ production-ready commands** for common development workflows:
+
+<CardGrid>
+	<Card title="Environment Management" icon="rocket">
+		`ahoy up`, `ahoy down`, `ahoy restart` - Control your development environment
+	</Card>
+	<Card title="Development Tools" icon="seti:shell">
+		`ahoy shell`, `ahoy logs`, `ahoy install` - Essential development utilities
+	</Card>
+	<Card title="Testing & Quality" icon="approve-check">
+		`ahoy test`, `ahoy lint` - Multi-language testing and code quality
+	</Card>
+	<Card title="Drupal Integration" icon="seti:php">
+		`ahoy drush`, `ahoy cr`, `ahoy uli` - Full Drupal workflow support
+	</Card>
+</CardGrid>
+
+[View the complete examples file →](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)
 
 ## Getting Started Guides
 
@@ -67,13 +109,32 @@ Dive deeper into Ahoy with our comprehensive guides:
 	</Card>
 </CardGrid>
 
-## Use Cases
+## When Should You Use Ahoy?
 
-Ahoy is incredibly versatile and can be used in various scenarios:
+Ahoy really shines when you're dealing with:
 
-- **Development Workflows**: Standardise project setup, build, and deployment commands
-- **DevOps Automation**: Create consistent scripts across different environments
-- **Team Collaboration**: Share and document project-specific CLI commands
-- **Containerised Environments**: Seamlessly work with Docker and other containerization tools
+- **Team Consistency**: Everyone on your team can run the same commands the same way, no matter their setup
+- **Complex Commands**: Those awful long commands with 15 flags that you always get wrong? Turn them into `ahoy deploy`
+- **Project Documentation**: Instead of hunting through README files, your commands document themselves
+- **Multiple Environments**: Different commands for dev, staging, and production without the confusion
+- **New Team Members**: Instead of sending them a 20-page setup guide, they can just run `ahoy` and see exactly what's available
+- **Containerised Environments**: Make Docker commands bearable for humans to use
+
+## Key Benefits
+
+### Zero-Code Configuration
+Just write some YAML, and you're done! No programming skills needed - each command is simply declared with what it does and what it should run.
+
+### Self-Documenting Commands
+The best part? Every command you create automatically gets:
+- Built-in help text and command listings when you run `ahoy`
+- Tab completion (when set up)
+- Usage instructions that your teammates will actually read
+
+### Flexible & Powerful
+- Works from any subdirectory in your project
+- Handles environment variables like a champ
+- Lets you import and override commands across multiple files
+- Supports command aliases for those really useful shortcuts
 
 Ready to streamline your project workflows? [Get Started](/guides/getting-started) with Ahoy today!

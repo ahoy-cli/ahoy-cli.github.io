@@ -1,175 +1,11 @@
 ---
 title: CLI Reference
-description: Comprehensive reference for the Ahoy CLI tool
----
-
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-
-# CLI Reference
-## Overview
-
-Ahoy is a CLI tool that helps you create self-documenting command-line interfaces by defining commands in YAML configuration files. This reference covers all available commands, global flags, and usage patterns.
-
-## Global Flags
-
-Ahoy supports several global flags that can be used with most commands:
-
-- `--ahoy-file`: Specify a custom path to the Ahoy YAML configuration file
-  ```bash
-  ahoy --ahoy-file /path/to/custom/ahoyfile.yml
-  ```
-
-- `--verbose` or `-v`: Enable verbose output for more detailed logging
-  ```bash
-  ahoy --verbose command
-  ```
-
-- `--help` or `-h`: Display help information for any command
-  ```bash
-  ahoy --help
-  ahoy command --help
-  ```
-
-## Core Commands
-
-### `ahoy init`
-
-Initialise a new Ahoy configuration in the current directory.
-
-<Tabs>
-<TabItem label="Usage">
-```bash
-ahoy init
-```
-</TabItem>
-<TabItem label="Description">
-Creates a starter `ahoy.yml` file with example configurations to help you get started.
-</TabItem>
-</Tabs>
-
-### `ahoy list`
-
-List all available commands defined in the current Ahoy configuration.
-
-<Tabs>
-<TabItem label="Usage">
-```bash
-ahoy list
-```
-</TabItem>
-<TabItem label="Description">
-Displays all commands defined in the `ahoy.yml` file, along with their descriptions.
-</TabItem>
-</Tabs>
-
-### `ahoy run`
-
-Execute a specific command defined in the Ahoy configuration.
-
-<Tabs>
-<TabItem label="Usage">
-```bash
-ahoy run <command-name>
-```
-</TabItem>
-<TabItem label="Example">
-```bash
-ahoy run build
-ahoy run test
-```
-</TabItem>
-<TabItem label="Description">
-Runs the specified command as defined in the Ahoy YAML configuration. Supports command interpolation and environment variable substitution.
-</TabItem>
-</Tabs>
-
-### `ahoy doctor`
-
-Perform a diagnostic check on your Ahoy configuration.
-
-<Tabs>
-<TabItem label="Usage">
-```bash
-ahoy doctor
-```
-</TabItem>
-<TabItem label="Description">
-Validates the Ahoy YAML configuration, checks for potential issues, and provides recommendations.
-</TabItem>
-</Tabs>
-
-## Advanced Usage
-
-### Environment Variable Support
-
-Ahoy supports environment variable interpolation in command definitions:
-
-```yaml
-commands:
-  deploy:
-    cmd: "docker deploy ${DEPLOY_TARGET}"
-```
-
-You can set environment variables before running Ahoy commands to customise behavior.
-
-### Importing Configurations
-
-Ahoy supports importing and extending configurations from multiple YAML files:
-
-```yaml
-imports:
-  - docker.yml
-  - testing.yml
-```
-
-## Best Practices
-
-- Keep your Ahoy configuration files version-controlled
-- Use descriptive command names and include helpful descriptions
-- Leverage environment variables for flexible configuration
-- Use imports to modularise and share command definitions across projects
-
-## Troubleshooting
-
-- If a command fails, use the `--verbose` flag for more detailed error information
-- Ensure all referenced scripts and commands are executable
-- Check that required dependencies are installed
-
-## Examples
-
-<Tabs>
-<TabItem label="Docker Project">
-```bash
-# List available commands
-ahoy list
-
-# Run a build command
-ahoy run build
-
-# Deploy with a specific environment
-DEPLOY_ENV=staging ahoy run deploy
-```
-</TabItem>
-<TabItem label="Web Development">
-```bash
-# Install dependencies
-ahoy run install
-
-# Start development server
-ahoy run dev
-
-# Run tests
-ahoy run test
-```
-</TabItem>
-</Tabs>
-
----
-title: CLI Reference
 description: Complete reference for the Ahoy command-line interface
 ---
 
 # Ahoy CLI Reference
+
+import { Badge } from '@astrojs/starlight/components';
 
 This guide provides a complete reference for all Ahoy command-line interface options and features.
 
@@ -205,9 +41,18 @@ ahoy [options] [command] [args...]
 These commands are available by default:
 
 ```bash
-ahoy help         # Show help about a command
+ahoy init         # Create a new .ahoy.yml with examples
+ahoy init --force # Overwrite existing .ahoy.yml file
+ahoy help         # Show help about a command  
 ahoy version      # Show version information
 ```
+
+#### ahoy init
+
+Creates a new `.ahoy.yml` file in the current directory with comprehensive examples. This gives you **30+ production-ready commands** covering common development workflows including environment management, testing, Docker operations, and Drupal integration.
+
+Options:
+- `--force`: Overwrite an existing `.ahoy.yml` file without prompting
 
 ### Custom Commands
 
@@ -237,7 +82,7 @@ Ahoy looks for configuration files in this order:
 ```yaml
 ahoyapi: v2
 
-# Optional global environment file
+# Optional global environment file (v2.3.0+)
 env: .env
 
 # Optional command entrypoint override
@@ -275,10 +120,11 @@ Usage:
 ahoy greet World  # Output: Hello, World!
 ```
 
-## Environment Variables
+## Environment Variables <Badge text="v2.3.0+" variant="tip" />
 
 ### Environment Files
 
+**Single Environment File (backwards compatible)**:
 ```yaml
 # Global environment file
 env: .env
@@ -288,6 +134,25 @@ commands:
     # Command-specific environment file
     env: .env.local
 ```
+
+**Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+```yaml
+# Multiple global environment files
+env:
+  - .env.base
+  - .env.local
+  - .env.override
+
+commands:
+  command:
+    # Multiple command-specific environment files
+    env:
+      - .env.deploy
+      - .env.staging
+      - .env.secrets
+```
+
+**Loading Order**: Files are loaded in order, with later files overriding earlier ones. Command-specific files always override global files.
 
 ### Variable Access
 
@@ -327,7 +192,7 @@ Enable bash completion:
 eval "$(ahoy --generate-bash-completion)"
 ```
 
-### Zsh Completion
+### Zsh Completion <Badge text="v2.3.0+" variant="tip" size="small" />
 
 Use the dedicated Zsh plugin:
 
@@ -376,6 +241,7 @@ commands:
 commands:
   hello:
     usage: Say hello
+    description: A simple greeting command
     cmd: echo "Hello!"
 ```
 
@@ -384,6 +250,11 @@ commands:
 commands:
   greet:
     usage: Greet someone
+    description: |
+      A personalised greeting command.
+      
+      Arguments:
+        $1: Name to greet
     cmd: echo "Hello, $1!"
 ```
 
