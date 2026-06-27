@@ -1,16 +1,10 @@
 ---
 title: Getting Started with Ahoy
-description: Learn how to install and use Ahoy for your project
+description: Install Ahoy and run your first commands
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Steps } from '@astrojs/starlight/components';
-import { Aside, Badge } from '@astrojs/starlight/components';
-
-# Getting Started with Ahoy
-
-Welcome to Ahoy! This guide will help you install Ahoy and create your first commands.
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
 ## Installation
 
@@ -25,258 +19,79 @@ Welcome to Ahoy! This guide will help you install Ahoy and create your first com
     os=$(uname -s | tr '[:upper:]' '[:lower:]') && architecture=$(case $(uname -m) in x86_64 | amd64) echo "amd64" ;; aarch64 | arm64 | armv8) echo "arm64" ;; *) echo "amd64" ;; esac) && sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
     ```
 
-    Alternatively, you can:
-    1. Download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases)
-    2. Move the appropriate binary for your platform into a directory in your $PATH
-    3. Rename it to `ahoy`
-    4. Make it executable with `chmod +x /path/to/ahoy`
+    Or download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases) and place the binary somewhere in your `$PATH`.
+
   </TabItem>
   <TabItem label="Windows (WSL2)">
-    Use the Linux installation instructions above, selecting the appropriate architecture for your system.
+    Use the Linux instructions above.
   </TabItem>
 </Tabs>
 
-<Aside type="tip">
-  After installation, run `ahoy --version` to verify it's working. You should see the version number displayed.
-</Aside>
+Verify it's working:
 
-<Aside type="tip">
-  **Want shell autocompletion?** Check out our [Shell Autocompletion guide](/guides/shell-autocompletion) to set up tab completion for Ahoy commands.
-</Aside>
-
-## Quick Start: Choose Your Path
-
-Pick whichever approach suits you best to get up and running with Ahoy:
-
-### Option 1: Start with Examples (Recommended)
-
-Honestly, this is the easiest way to get going. Our examples file has loads of useful commands already set up for common development workflows:
-
-<Tabs>
-<TabItem label="Using ahoy init">
 ```bash
-# Navigate to your project directory
-cd my-project
-
-# Initialise with examples
-ahoy init
+ahoy --version
 ```
-</TabItem>
-<TabItem label="Download directly">
-```bash
-# Download the examples file to see what's inside
-curl -o .ahoy.yml https://raw.githubusercontent.com/ahoy-cli/ahoy/master/examples/examples.ahoy.yml
 
-# Then explore the commands
+## Start with examples
+
+The quickest way to get going is to initialise a project with our curated examples file. It includes 30+ ready-to-use commands for common development workflows.
+
+```bash
+cd my-project
+ahoy config init
+```
+
+This creates an `.ahoy.yml` in the current directory. Run `ahoy` on its own to see what's available:
+
+```bash
 ahoy
 ```
-</TabItem>
-</Tabs>
-
-This gives you **30+ ready-to-use commands** including:
-- **Environment Management**: `ahoy up`, `ahoy down`, `ahoy restart`
-- **Development Tools**: `ahoy shell`, `ahoy logs`, `ahoy install`
-- **Testing & Quality**: `ahoy test`, `ahoy lint`
-- **Database Operations**: `ahoy db`, `ahoy db:backup`
-- **Drupal Integration**: `ahoy drush`, `ahoy cr`, `ahoy uli`
-
-Try it out:
-```bash
-ahoy status    # Show service status
-ahoy urls      # Show available URLs
-ahoy shell     # Open a shell in your container
-```
 
 <Aside type="tip">
-  The examples file includes commands for various development stacks (Node.js, PHP, Python) and special Drupal integration. Customise it for your specific project needs!
+  Want to inspect the file before downloading? The examples file is at
+  [`examples/examples.ahoy.yml`](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)
+  in the repository.
 </Aside>
 
-### Option 2: Start from Scratch
+## Write your own commands
 
-If you prefer to build your own configuration:
-
-<Steps>
-1. **Create your project directory and `.ahoy.yml` file:**
-
-   ```bash
-   mkdir my-project
-   cd my-project
-   touch .ahoy.yml
-   ```
-
-2. **Add your first commands:**
-
-   ```yaml
-   ahoyapi: v2
-
-   commands:
-     hello:
-       usage: Say hello to someone
-       description: |
-         A simple greeting command that demonstrates basic usage.
-
-         Arguments:
-           $1: Name to greet
-       cmd: echo "Hello, $1!"
-
-     list:
-       usage: List files in the current directory
-       description: Shows all files and directories with detailed information
-       cmd: ls -la
-   ```
-
-3. **Run your commands:**
-
-   ```bash
-   ahoy hello World  # Output: Hello, World!
-   ahoy list         # Shows directory listing
-   ahoy              # Shows all available commands
-   ```
-</Steps>
-
-## Understanding the Basic Structure
-
-The `.ahoy.yml` file has a simple structure:
-
-- `ahoyapi: v2` - Required version declaration
-- `commands:` - Section containing all your commands
-- Each command has:
-  - A name (e.g., `hello`)
-  - `usage:` - Help text describing the command
-  - `cmd:` - The actual command to execute
-
-## A More Practical Example
-
-Let's create commands you might actually use in a web development project:
+Create an `.ahoy.yml` file in your project root:
 
 ```yaml
 ahoyapi: v2
 
 commands:
-  start:
-    usage: Start the development environment
-    cmd: docker-compose up -d
+  hello:
+    usage: Say hello to someone
+    cmd: echo "Hello, $1!"
 
-  stop:
-    usage: Stop the development environment
-    cmd: docker-compose down
+  start:
+    usage: Start the dev environment
+    cmd: docker-compose up -d
 
   logs:
-    usage: View container logs
-    cmd: docker-compose logs -f $1
-
-  db-import:
-    usage: Import a database file
-    cmd: |
-      echo "Importing database from $1..."
-      docker-compose exec -T database mysql -uroot -proot mydb < $1
-
-  test:
-    usage: Run the test suite
-    cmd: |
-      echo "Running tests..."
-      docker-compose exec app npm test
+    usage: Follow container logs
+    cmd: docker-compose logs -f $@
 ```
 
-## Using Environment Variables <Badge text="v2.3.0+" variant="tip" size="small" />
+Run your commands from anywhere in the project tree:
 
-Ahoy supports environment variables through `.env` files:
-
-1. **Create a `.env` file:**
-   ```bash
-   DB_USER=root
-   DB_PASS=root
-   DB_NAME=myapp
-   ```
-
-2. **Update your `.ahoy.yml`:**
-   ```yaml
-   ahoyapi: v2
-
-   env: .env  # v2.3.0+
-
-   commands:
-     db-connect:
-       usage: Connect to the database
-       cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
-   ```
-
-## Command Aliases <Badge text="v2.2.0+" variant="tip" size="small" />
-
-Create shortcuts for frequently used commands:
-
-```yaml
-ahoyapi: v2
-
-commands:
-  start-dev:
-    usage: Start development environment
-    cmd: docker-compose up -d
-    aliases: ["up", "start"]  # v2.2.0+
-```
-
-Now you can use any of these:
 ```bash
-ahoy start-dev
-ahoy up
+ahoy hello World   # Hello, World!
 ahoy start
-```
-## Ahoy Features
-
-<CardGrid>
-  <Card title="Command Templates" icon="setting">
-    Use regular `bash` syntax like `"$@"` for all arguments, or `$1` for the first argument.
-  </Card>
-  <Card title="Environment Variables" icon="puzzle">
-    Set environment variables at both file and command level using the `env` field. <Badge text="v2.3.0+" variant="tip" size="small" />
-  </Card>
-  <Card title="Command Aliases" icon="star">
-    Define alternative names for your commands to make them more convenient to use. <Badge text="v2.2.0+" variant="tip" size="small" />
-  </Card>
-  <Card title="Import Config Files" icon="document">
-    Import multiple config files to organise your commands across multiple files.
-  </Card>
-</CardGrid>
-
-## Basic Example
-
-Here's a simple example of how Ahoy can make complex commands easier to use:
-
-**Without Ahoy**:
-```bash
-docker exec -i $(docker-compose ps -q cli) bash -c 'mysql -u$DB_ENV_MYSQL_USER -p$DB_ENV_MYSQL_PASSWORD -h$DB_PORT_3306_TCP_ADDR $DB_ENV_MYSQL_DATABASE' < some-database.sql
-```
-
-**With Ahoy**:
-```bash
-ahoy mysql-import < some-database.sql
-```
-
-Here's how you'd set that up in your `.ahoy.yml` file:
-
-```yaml
-ahoyapi: v2
-
-commands:
-  mysql-import:
-    usage: Import a MySQL database
-    cmd: |
-      docker exec -i $(docker-compose ps -q cli) bash -c 'mysql -u$DB_ENV_MYSQL_USER -p$DB_ENV_MYSQL_PASSWORD -h$DB_PORT_3306_TCP_ADDR $DB_ENV_MYSQL_DATABASE' < $1
+ahoy logs web
+ahoy              # Shows all commands and their usage text
 ```
 
 <Aside type="note">
-  Commands always run relative to the `.ahoy.yml` file, but can be called from any subfolder in your project.
+  Ahoy searches up the directory tree for `.ahoy.yml`, so you can run commands from any subdirectory
+  in your project.
 </Aside>
 
-## Next Steps
+## Next steps
 
-Now that you have Ahoy installed and understand the basics, you might want to:
-
-- Learn about [YAML configuration](/guides/yaml-config) to create more advanced command setups
-- Explore [environment variables](/guides/environment) to make your commands more flexible
-- Check out the [CLI reference](/reference/cli) for all available options
-- Set up [shell autocompletion](/guides/shell-autocompletion) for more efficient workflow
-
-<Aside type="note">
-  Remember that Ahoy commands always run relative to the `.ahoy.yml` file location, so you can run them from any subdirectory in your project.
-</Aside>
+- [Writing Commands](/guides/writing-commands) - practical patterns and real-world examples
+- [Shell Autocompletion](/guides/shell-autocompletion) - set up tab completion
+- [YAML Schema Reference](/reference/yaml-schema) - complete field-by-field reference
+- [CLI Reference](/reference/cli) - all command-line flags and built-in commands

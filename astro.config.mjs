@@ -4,6 +4,7 @@ import starlight from "@astrojs/starlight";
 
 // https://astro.build/config
 export default defineConfig({
+  site: "https://ahoy-cli.github.io",
   integrations: [
     starlight({
       title: "Ahoy",
@@ -36,7 +37,7 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
-            { label: "YAML Configuration", slug: "guides/yaml-config" },
+            { label: "Writing Commands", slug: "guides/writing-commands" },
             { label: "Command Execution", slug: "guides/command-execution" },
             { label: "Importing & Overriding", slug: "guides/importing" },
             { label: "Environment", slug: "guides/environment" },

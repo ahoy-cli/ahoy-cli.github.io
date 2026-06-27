@@ -1,9 +1,9 @@
 ---
 title: Welcome to Ahoy
-description: Get started with Ahoy - a powerful, YAML-based CLI task runner
+description: Create self-documenting CLI programs from YAML files
 template: doc
 hero:
-  tagline: Create self-documenting CLI programs with ease, using YAML files in your source tree
+  tagline: Give every project its own CLI - zero code, zero dependencies, just YAML.
   image:
     file: ../../assets/ahoy-hero.webp
   actions:
@@ -16,16 +16,13 @@ hero:
       icon: external
 ---
 
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Icon } from '@astrojs/starlight/components';
+import { Card, CardGrid } from "@astrojs/starlight/components";
 
 ## What is Ahoy?
 
-Ahoy is a brilliant little command-line tool that turns project chaos into organised workflows. Using simple YAML configuration files, you can create self-documenting CLI programs that your entire team can actually use and understand.
+Ahoy is a command-line tool that turns your project's scripts and commands into a self-documenting CLI. You write a `.ahoy.yml` file, and Ahoy gives your whole team a consistent, discoverable interface to run things - from any project subdirectory, with tab completion and help text built in.
 
-Think of it as your project's personal command centre - no coding required, no dependencies to worry about, just straightforward configuration that makes your development life easier.
-
-Ahoy transforms complex commands like this:
+It turns something like this:
 
 ```bash
 docker-compose exec --user=82 web drush cache:rebuild --uri=https://example.com
@@ -37,104 +34,71 @@ Into this:
 ahoy cr
 ```
 
-Whether you're juggling a personal side project or wrestling with enterprise complexity, Ahoy cuts through the noise and makes your development process actually enjoyable.
+No programming required. No dependencies to install. It works with Docker, SSH, local scripts, or anything you can run from a shell.
 
 ## Why use Ahoy?
 
 <CardGrid stagger>
-	<Card title="Simple Setup" icon="document">
-		Just write some YAML - that's it! No programming, no complex configs, no fuss.
-	</Card>
-	<Card title="Self-Documenting Magic" icon="open-book">
-		Your commands automatically get help text and documentation. Your future self will thank you.
-	</Card>
-	<Card title="Powerful & Extensible" icon="rocket">
-		Environment variables, command composition, aliases, multiple files - it's got everything you need.
-	</Card>
-	<Card title="Docker's Best Friend" icon="seti:docker">
-		Turn impossible Docker commands into something humans can actually remember and use.
-	</Card>
+  <Card title="Zero setup" icon="document">
+    Write some YAML and you're done. Commands are defined once and work the same way for everyone on
+    the team.
+  </Card>
+  <Card title="Self-documenting" icon="open-book">
+    Running `ahoy` lists all available commands with their descriptions. Your README doesn't need a
+    commands section anymore.
+  </Card>
+  <Card title="Works anywhere" icon="rocket">
+    Run commands from any subdirectory - Ahoy finds the config and always executes relative to it.
+  </Card>
+  <Card title="Docker-friendly" icon="seti:docker">
+    Turn verbose Docker and docker-compose commands into short, memorable aliases your whole team
+    can use.
+  </Card>
 </CardGrid>
 
-## Quick Start with Examples
-
-Get started immediately with our comprehensive examples file:
+## Quick start
 
 ```bash
-# Initialise with ready-to-use commands
-ahoy init
+# Install (macOS)
+brew install ahoy
+
+# Initialise a project with example commands
+cd my-project
+ahoy config init
+
+# See what's available
+ahoy
 ```
 
-This gives you **30+ production-ready commands** for common development workflows:
+The examples file includes 30+ ready-to-use commands for environment management, testing, databases, and Drupal. Customise it or start fresh - either way, you're up and running in minutes.
+
+[Get Started →](/guides/getting-started)
+
+## Explore
 
 <CardGrid>
-	<Card title="Environment Management" icon="rocket">
-		`ahoy up`, `ahoy down`, `ahoy restart` - Control your development environment
-	</Card>
-	<Card title="Development Tools" icon="seti:shell">
-		`ahoy shell`, `ahoy logs`, `ahoy install` - Essential development utilities
-	</Card>
-	<Card title="Testing & Quality" icon="approve-check">
-		`ahoy test`, `ahoy lint` - Multi-language testing and code quality
-	</Card>
-	<Card title="Drupal Integration" icon="seti:php">
-		`ahoy drush`, `ahoy cr`, `ahoy uli` - Full Drupal workflow support
-	</Card>
+  <Card title="Writing Commands" icon="document">
+    Practical patterns for arguments, aliases, multi-line scripts, chaining, and real-world examples.
+
+    [Writing Commands →](/guides/writing-commands)
+
+  </Card>
+  <Card title="Importing & Overriding" icon="puzzle">
+    Split commands across multiple files and build reusable command libraries.
+
+    [Importing & Overriding →](/guides/importing)
+
+  </Card>
+  <Card title="Environment Variables" icon="setting">
+    Load `.env` files per-command or globally, and manage configuration across environments safely.
+
+    [Environment →](/guides/environment)
+
+  </Card>
+  <Card title="YAML Schema Reference" icon="list-format">
+    Complete technical reference for every field in `.ahoy.yml`.
+
+    [YAML Schema →](/reference/yaml-schema)
+
+  </Card>
 </CardGrid>
-
-[View the complete examples file →](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)
-
-## Getting Started Guides
-
-Dive deeper into Ahoy with our comprehensive guides:
-
-<CardGrid>
-	<Card title="Installation" icon="seti:go">
-		<a href="/guides/getting-started">
-			Learn how to install Ahoy and set up your first project
-			<Icon name="right-arrow" />
-		</a>
-	</Card>
-	<Card title="Shell Autocompletion" icon="seti:shell">
-		<a href="/guides/shell-autocompletion">
-			Configure shell autocompletion for a smoother CLI experience
-			<Icon name="right-arrow" />
-		</a>
-	</Card>
-	<Card title="Environment Variables" icon="setting">
-		<a href="/guides/environment-variables">
-			Master environment variable handling in Ahoy
-			<Icon name="right-arrow" />
-		</a>
-	</Card>
-</CardGrid>
-
-## When Should You Use Ahoy?
-
-Ahoy really shines when you're dealing with:
-
-- **Team Consistency**: Everyone on your team can run the same commands the same way, no matter their setup
-- **Complex Commands**: Those awful long commands with 15 flags that you always get wrong? Turn them into `ahoy deploy`
-- **Project Documentation**: Instead of hunting through README files, your commands document themselves
-- **Multiple Environments**: Different commands for dev, staging, and production without the confusion
-- **New Team Members**: Instead of sending them a 20-page setup guide, they can just run `ahoy` and see exactly what's available
-- **Containerised Environments**: Make Docker commands bearable for humans to use
-
-## Key Benefits
-
-### Zero-Code Configuration
-Just write some YAML, and you're done! No programming skills needed - each command is simply declared with what it does and what it should run.
-
-### Self-Documenting Commands
-The best part? Every command you create automatically gets:
-- Built-in help text and command listings when you run `ahoy`
-- Tab completion (when set up)
-- Usage instructions that your teammates will actually read
-
-### Flexible & Powerful
-- Works from any subdirectory in your project
-- Handles environment variables like a champ
-- Lets you import and override commands across multiple files
-- Supports command aliases for those really useful shortcuts
-
-Ready to streamline your project workflows? [Get Started](/guides/getting-started) with Ahoy today!

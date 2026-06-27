@@ -3,11 +3,12 @@ title: YAML Schema
 description: Complete technical reference for the Ahoy YAML configuration schema
 ---
 
+import { Badge } from "@astrojs/starlight/components";
+
 # YAML Schema Reference
 
-import { Badge } from '@astrojs/starlight/components';
-
 This technical reference documents the complete schema for Ahoy YAML configuration files. It details all supported fields, validation rules, and implementation details as defined in the Ahoy codebase.
+
 ## YAML File Format
 
 Ahoy uses YAML configuration files to define commands and settings. By default, Ahoy looks for a file named `.ahoy.yml` in the current directory or any parent directory. A custom file can be specified using the `-f` flag.
@@ -32,8 +33,8 @@ env: .env
 entrypoint:
   - bash
   - "-c"
-  - '{{cmd}}'
-  - '{{name}}'
+  - "{{cmd}}"
+  - "{{name}}"
 
 # Optional: Usage description for help text
 usage: "My project CLI commands"
@@ -46,6 +47,7 @@ commands:
 ```
 
 ## Field Specifications
+
 ### `ahoyapi`
 
 **Required**: Yes  
@@ -82,6 +84,7 @@ usage: "Collection of commands for the project"
 **Description**: Path(s) to global environment file(s), relative to the YAML file location. Environment variables defined here are available to all commands in this configuration file. Supports both single file and multiple files syntax.
 
 **Single Environment File (backwards compatible)**:
+
 ```yaml
 env: .env
 env: .env.local
@@ -89,6 +92,7 @@ env: ../shared/config.env
 ```
 
 **Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+
 ```yaml
 env:
   - .env.base
@@ -96,7 +100,8 @@ env:
   - .env.override
 ```
 
-**Technical Details**: 
+**Technical Details**:
+
 - Environment variables are loaded at runtime and passed to command processes
 - When using multiple files, they are loaded in order with later files overriding earlier ones
 - Blank lines and lines starting with '#' are ignored
@@ -116,15 +121,17 @@ env:
 entrypoint:
   - bash
   - "-c"
-  - '{{cmd}}'
-  - '{{name}}'
+  - "{{cmd}}"
+  - "{{name}}"
 ```
 
 **Template Variables**:
-- `{{cmd}}`: Replaced with the command's `cmd` value 
+
+- `{{cmd}}`: Replaced with the command's `cmd` value
 - `{{name}}`: Replaced with the command name
 
 **Implementation Details**:
+
 - Template variables are replaced at runtime before execution
 - The final command is executed with the working directory set to the directory containing the YAML file
 
@@ -137,6 +144,7 @@ entrypoint:
 **Description**: Container for all command definitions. Each key represents a command name, and its value is a command configuration object.
 
 **Validation Rule**: This field must be present and contain at least one command.
+
 ## Command Definition Fields
 
 Each command defined under `commands` can have the following fields:
@@ -169,17 +177,17 @@ commands:
     usage: Deploy the application
     description: |
       Deploy the application to the specified environment.
-      
+
       This command will:
       - Build the application
       - Run tests
       - Deploy to the target environment
       - Send notifications
-      
+
       Arguments:
         $1: Environment (dev|staging|prod)
         $2: Version tag (optional)
-      
+
       Examples:
         ahoy deploy dev v1.0.0
         ahoy deploy prod
@@ -197,7 +205,7 @@ commands:
 commands:
   single-line:
     cmd: echo "Hello"
-  
+
   multi-line:
     cmd: |
       echo "Starting..."
@@ -206,6 +214,7 @@ commands:
 ```
 
 **Technical Details**:
+
 - Executed through the configured entrypoint (default is bash)
 - Has access to environment variables from both global and command-specific env files
 - Working directory is set to the directory containing the YAML file
@@ -244,11 +253,13 @@ commands:
 ```
 
 **Validation Rules**:
+
 - Cannot be used together with `cmd` (must specify one or the other)
 - Must contain at least one item if specified
 - If the imports don't resolve to valid files and `optional` is false, Ahoy will exit with an error
 
 **Implementation Details**:
+
 - Relative paths are resolved based on the parent YAML file location
 - Commands from the imported files become subcommands under this command
 - Imported files must also use `ahoyapi: v2`
@@ -262,6 +273,7 @@ commands:
 **Description**: Path(s) to command-specific environment file(s), relative to the YAML file location. Variables defined here override any with the same name in the global env files. Supports both single file and multiple files syntax.
 
 **Single Environment File (backwards compatible)**:
+
 ```yaml
 commands:
   deploy:
@@ -271,6 +283,7 @@ commands:
 ```
 
 **Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+
 ```yaml
 commands:
   deploy:
@@ -283,6 +296,7 @@ commands:
 ```
 
 **Technical Details**:
+
 - When using multiple files, they are loaded in order with later files overriding earlier ones
 - Command-specific environment files always override global environment files
 - Non-existent files are gracefully ignored
@@ -331,8 +345,8 @@ env: .env
 entrypoint:
   - bash
   - "-c"
-  - '{{cmd}}'
-  - '{{name}}'
+  - "{{cmd}}"
+  - "{{name}}"
 
 commands:
   # Basic command
@@ -340,7 +354,7 @@ commands:
     usage: Say hello to someone
     description: |
       A simple greeting command that demonstrates basic argument usage.
-      
+
       Arguments:
         $1: Name to greet
     cmd: echo "Hello, $1!"
@@ -365,7 +379,7 @@ commands:
     usage: Set up project
     description: |
       Complete project setup including dependency installation.
-      
+
       This command will:
       - Install Node.js dependencies
       - Install PHP dependencies via Composer
@@ -401,29 +415,36 @@ export PATH=$PATH:/usr/local/bin
 Commands have access to:
 
 ### Positional Arguments
+
 - `$1`, `$2`, etc.: Individual arguments
 - `$@`: All arguments as array
 - `$#`: Number of arguments
 - `$0`: Command name
 
 ### Environment Variables
-- Variables from global env file
-- Variables from command-specific env file
-- System environment variables
+
+- Variables from the shell environment
+- Variables from global env files
+- Variables from command-specific env files
+- `AHOY_COMMAND_NAME` - the name of the command being run (injected by Ahoy) <Badge text="v3" variant="success" size="small" />
+- `AHOY_CMD` - path to the ahoy binary (injected by Ahoy) <Badge text="v3" variant="success" size="small" />
 
 ## Special Considerations
 
 ### File Paths
+
 - All paths are relative to the YAML file location
 - Environment file paths are also relative
 - Import paths should use `./` for current directory
 
 ### Command Override Rules
+
 - Later commands override earlier ones
 - Imported commands can be overridden
 - Last definition wins
 
 ### Environment Variable Precedence
+
 1. Command-specific env file
 2. Global env file
 3. System environment variables
@@ -462,7 +483,7 @@ commands:
   # ✅ Good: Clear and descriptive
   db-migrate:
     usage: Run database migrations
-  
+
   # ❌ Bad: Unclear abbreviation
   dbm:
     usage: Run database migrations
@@ -478,17 +499,17 @@ commands:
     usage: Deploy the application to specified environment
     description: |
       Deploy the application to the specified environment with optional version.
-      
+
       This command performs a complete deployment including:
       - Building the application
       - Running tests
       - Deploying to target environment
       - Sending notifications
-      
+
       Arguments:
         $1: Environment (dev|staging|prod)
         $2: Version tag (optional)
-      
+
       Examples:
         ahoy deploy dev v1.0.0
         ahoy deploy prod
@@ -496,7 +517,7 @@ commands:
 
 ## Related Topics
 
-- [YAML Configuration Guide](guides/yaml-config)
+- [Writing Commands](guides/writing-commands)
 - [Command Execution](guides/command-execution)
 - [Environment Variables](guides/environment)
 - [CLI Reference](reference/cli)
