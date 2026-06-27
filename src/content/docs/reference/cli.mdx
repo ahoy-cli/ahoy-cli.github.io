@@ -1,357 +1,118 @@
 ---
 title: CLI Reference
-description: Complete reference for the Ahoy command-line interface
+description: Complete reference for Ahoy command-line options and built-in commands
 ---
 
-# Ahoy CLI Reference
+import { Badge } from "@astrojs/starlight/components";
 
-import { Badge } from '@astrojs/starlight/components';
+## Synopsis
 
-This guide provides a complete reference for all Ahoy command-line interface options and features.
+```
+ahoy [flags] [command] [args...]
+```
 
-## Command Syntax
+## Global flags
 
-The basic syntax for Ahoy commands is:
+| Flag            | Short | Description                                                     |
+| --------------- | ----- | --------------------------------------------------------------- |
+| `--file <path>` | `-f`  | Use a specific config file instead of searching for `.ahoy.yml` |
+| `--verbose`     |       | Enable verbose output                                           |
+| `--version`     |       | Print the Ahoy version and exit                                 |
+| `--help`        | `-h`  | Show help                                                       |
+
+## Built-in commands
+
+### `ahoy config` <Badge text="v3" variant="success" />
+
+Management commands for your Ahoy configuration.
+
+#### `ahoy config init [url]`
+
+Downloads a starter `.ahoy.yml` into the current directory. Without a URL it fetches the official examples file (30+ ready-to-use commands). Pass a custom URL to download your own template.
 
 ```bash
-ahoy [options] [command] [args...]
+ahoy config init               # Download official examples
+ahoy config init https://...   # Download a custom template
+ahoy config init --force       # Overwrite an existing .ahoy.yml
 ```
 
-## Global Options
+#### `ahoy config validate`
 
-### Basic Options
+Checks your `.ahoy.yml` (and any imported files) for common issues:
+
+- Unsupported or missing fields
+- Missing import files (not marked `optional: true`)
+- Features that require a newer version of Ahoy
 
 ```bash
---file, -f        # Specify an alternate YAML file
---help, -h        # Show help
---verbose         # Enable verbose output
---version         # Show version information
+ahoy config validate
 ```
 
-### Special Options
+Errors are always shown. Warnings are shown in verbose mode (`--verbose`). The validator also provides actionable suggestions when it finds a problem.
+
+### `ahoy help`
 
 ```bash
---generate-bash-completion  # Generate bash completion script
+ahoy help            # Root help listing
+ahoy help <command>  # Help for a specific command
 ```
 
-## Command Types
+### Deprecated: `ahoy init`
 
-### Built-in Commands
+`ahoy init` still works but is deprecated. It redirects to `ahoy config init` with a notice. Prefer `ahoy config init` in any new scripts or documentation.
 
-These commands are available by default:
+## Config file discovery
+
+Ahoy searches for `.ahoy.yml` in the following order:
+
+1. The file specified by `--file` / `-f`
+2. `.ahoy.yml` in the current directory
+3. `.ahoy.yml` in each parent directory, up to the filesystem root
+
+The directory containing the found config file becomes the working directory for all commands.
+
+## Passing arguments to commands
+
+Arguments after the command name are passed through as bash positional parameters:
 
 ```bash
-ahoy init         # Create a new .ahoy.yml with examples
-ahoy init --force # Overwrite existing .ahoy.yml file
-ahoy help         # Show help about a command  
-ahoy version      # Show version information
+ahoy greet World       # $1 = "World"
+ahoy copy a.txt b.txt  # $1 = "a.txt", $2 = "b.txt"
+ahoy run npm test      # $@ = "npm test"
 ```
 
-#### ahoy init
+## Shell completion
 
-Creates a new `.ahoy.yml` file in the current directory with comprehensive examples. This gives you **30+ production-ready commands** covering common development workflows including environment management, testing, Docker operations, and Drupal integration.
-
-Options:
-- `--force`: Overwrite an existing `.ahoy.yml` file without prompting
-
-### Custom Commands
-
-Custom commands are defined in your `.ahoy.yml` file and are run as:
+### Bash
 
 ```bash
-ahoy command-name [arguments]
+# Generate and install the completion script
+mkdir -p ~/.bash_completion.d
+ahoy --generate-bash-completion > ~/.bash_completion.d/ahoy
+echo '. ~/.bash_completion.d/ahoy' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-For subcommands:
+### Zsh
 
-```bash
-ahoy namespace command-name [arguments]
-```
+Use the dedicated plugin at [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy). See the [Shell Autocompletion guide](/guides/shell-autocompletion) for setup instructions.
 
-## Configuration Files
+## Exit codes
 
-### Default Location
+| Code | Meaning                                                |
+| ---- | ------------------------------------------------------ |
+| `0`  | Success                                                |
+| `1`  | General error (command failed, config not found, etc.) |
 
-Ahoy looks for configuration files in this order:
-1. File specified by `--file` flag
-2. `.ahoy.yml` in current directory
-3. `.ahoy.yml` in parent directories
+Ahoy passes the exit code of the underlying command through unchanged.
 
-### File Format
+## Environment variables set by Ahoy <Badge text="v3" variant="success" />
 
-```yaml
-ahoyapi: v2
+Ahoy injects the following variables into every command's environment:
 
-# Optional global environment file (v2.3.0+)
-env: .env
+| Variable            | Value                             |
+| ------------------- | --------------------------------- |
+| `AHOY_COMMAND_NAME` | The name of the command being run |
+| `AHOY_CMD`          | Path to the ahoy binary           |
 
-# Optional command entrypoint override
-entrypoint:
-  - bash
-  - "-c"
-  - '{{cmd}}'
-  - '{{name}}'
-
-# Commands
-commands:
-  command-name:
-    usage: Command description
-    cmd: command to execute
-```
-
-## Command Arguments
-
-Arguments are passed to commands as bash-style positional parameters:
-
-- `$1`, `$2`, etc.: Individual arguments
-- `$@`: All arguments
-- `$0`: Command name
-
-Example:
-```yaml
-commands:
-  greet:
-    usage: Greet someone
-    cmd: echo "Hello, $1!"
-```
-
-Usage:
-```bash
-ahoy greet World  # Output: Hello, World!
-```
-
-## Environment Variables <Badge text="v2.3.0+" variant="tip" />
-
-### Environment Files
-
-**Single Environment File (backwards compatible)**:
-```yaml
-# Global environment file
-env: .env
-
-commands:
-  command:
-    # Command-specific environment file
-    env: .env.local
-```
-
-**Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
-```yaml
-# Multiple global environment files
-env:
-  - .env.base
-  - .env.local
-  - .env.override
-
-commands:
-  command:
-    # Multiple command-specific environment files
-    env:
-      - .env.deploy
-      - .env.staging
-      - .env.secrets
-```
-
-**Loading Order**: Files are loaded in order, with later files overriding earlier ones. Command-specific files always override global files.
-
-### Variable Access
-
-Environment variables can be accessed in commands:
-
-```yaml
-commands:
-  db:
-    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
-```
-
-## Exit Codes
-
-Ahoy uses standard Unix exit codes:
-
-- `0`: Success
-- `1`: General error
-- `2`: Misuse of shell builtins
-- Other codes: Command-specific error codes
-
-## Command Resolution
-
-When resolving commands, Ahoy:
-
-1. Searches for `.ahoy.yml` from current directory up
-2. Processes any imports
-3. Applies "last in wins" for duplicate commands
-4. Executes the matching command
-
-## Shell Completion
-
-### Bash Completion
-
-Enable bash completion:
-
-```bash
-eval "$(ahoy --generate-bash-completion)"
-```
-
-### Zsh Completion <Badge text="v2.3.0+" variant="tip" size="small" />
-
-Use the dedicated Zsh plugin:
-
-1. Install [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy)
-2. Configure in your `.zshrc`
-
-## Advanced Usage
-
-### Using Different Interpreters
-
-Override the default bash interpreter:
-
-```yaml
-# Python
-entrypoint:
-  - python3
-  - "-c"
-  - '{{cmd}}'
-
-# Node.js
-entrypoint:
-  - node
-  - "-e"
-  - '{{cmd}}'
-```
-
-### Working with Docker
-
-Special considerations for Docker commands:
-
-```yaml
-commands:
-  # Direct container execution
-  exec:
-    cmd: docker-compose exec $1 ${@:2}
-
-  # Piping input
-  import:
-    cmd: docker exec -i container mysql < $1
-```
-
-## Examples
-
-### Basic Command
-```yaml
-commands:
-  hello:
-    usage: Say hello
-    description: A simple greeting command
-    cmd: echo "Hello!"
-```
-
-### Command with Arguments
-```yaml
-commands:
-  greet:
-    usage: Greet someone
-    description: |
-      A personalised greeting command.
-      
-      Arguments:
-        $1: Name to greet
-    cmd: echo "Hello, $1!"
-```
-
-### Subcommands
-```yaml
-commands:
-  dev:
-    usage: Development commands
-    imports:
-      - dev.ahoy.yml
-```
-
-### Environment-Specific Command
-```yaml
-commands:
-  deploy:
-    usage: Deploy to environment
-    env: .env.deploy
-    cmd: ./deploy.sh $1
-```
-
-## Best Practices
-
-1. **Use Descriptive Names**
-   ```yaml
-   # ✅ Good
-   commands:
-     db-migrate:
-       cmd: ./migrate.sh
-   
-   # ❌ Bad
-   commands:
-     m:
-       cmd: ./migrate.sh
-   ```
-
-2. **Document Command Usage**
-   ```yaml
-   commands:
-     deploy:
-       usage: |
-         Deploy to specified environment
-         Args:
-           $1: Environment name (dev|staging|prod)
-   ```
-
-3. **Use Environment Variables**
-   ```yaml
-   commands:
-     db:
-       env: .env.db
-       cmd: mysql -u$DB_USER -p$DB_PASS
-   ```
-
-4. **Organise Related Commands**
-   ```yaml
-   commands:
-     db:
-       imports:
-         - ./commands/db.ahoy.yml
-   ```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Command Not Found**
-   - Check `.ahoy.yml` location
-   - Verify command name
-   - Check import paths
-
-2. **Environment Variables Not Set**
-   - Verify env file exists
-   - Check file permissions
-   - Use `--verbose` to debug
-
-3. **Import Issues**
-   - Use relative paths
-   - Check file existence
-   - Verify YAML syntax
-
-### Debug Mode
-
-Run with verbose output:
-
-```bash
-ahoy --verbose command
-```
-
-This shows:
-- Command resolution
-- Environment loading
-- Execution details
-
-## See Also
-
-- [YAML Configuration](guides/yaml-config)
-- [Command Execution](guides/command-execution)
-- [Environment Variables](guides/environment)
-- [Importing & Overriding](guides/importing)
+These are available to any script invoked through Ahoy.

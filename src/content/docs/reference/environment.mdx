@@ -1,838 +1,159 @@
 ---
 title: Environment Variables Reference
-description: Complete technical reference for environment variables in Ahoy
+description: Complete specification for environment file format, variable precedence, and Ahoy's runtime variables
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Aside, Badge } from '@astrojs/starlight/components';
+import { Aside, Badge } from "@astrojs/starlight/components";
 
-# Environment Variables Reference <Badge text="v2.3.0+" variant="tip" />
+## Overview <Badge text="v2.3.0+" variant="tip" />
 
-This reference provides a comprehensive technical guide to environment variables in Ahoy, including implementation details, supported formats, precedence rules, and advanced usage patterns.
+Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept a single file path or an array of paths <Badge text="v2.5.0+" variant="note" size="small" />.
 
-## Technical Specification
+## File path resolution
 
-### Implementation Overview
+All env file paths are relative to the directory containing the `.ahoy.yml` file - not your current working directory. This ensures consistent behaviour regardless of which subdirectory you run commands from.
 
-Ahoy's environment variable system is implemented in the core Go code (`ahoy.go`). The system processes environment files line by line, supports nesting and overrides, and injects variables into command execution contexts.
+## Precedence
 
-Key implementation facts:
-- Environment variables are read and parsed using the `getEnvironmentVars()` function
-- Variables are injected into each command's environment via the `command.Env` property
-- All environment files are relative to the location of the `.ahoy.yml` file
-- Variable resolution follows a precise override chain (system → global → command-specific)
+Variables are applied in this order, from lowest to highest priority:
 
-### Environment File Locations and Resolution <Badge text="v2.3.0+" variant="tip" size="small" />
+1. **Shell environment** - variables already in your shell when you run `ahoy`
+2. **Global env files** - loaded in the order listed under the top-level `env` key
+3. **Command-specific env files** - loaded in the order listed under a command's `env` key
 
-#### Global Environment Files
+Later sources override earlier ones. A command-specific variable always wins over a global one with the same name.
 
-Specified at the top level of your `.ahoy.yml`:
-
-<Tabs>
-<TabItem label="Single File (backwards compatible)">
-```yaml
-ahoyapi: v2
-env: .env  # Path is relative to the location of .ahoy.yml (v2.3.0+)
-
-commands:
-  # All commands can access variables from .env
-```
-</TabItem>
-<TabItem label="Multiple Files"> <Badge text="v2.5.0+" variant="note" size="small" />
-```yaml
-ahoyapi: v2
-env:
-  - .env.base     # Loaded first
-  - .env.local    # Overrides base
-  - .env.override # Final overrides
-
-commands:
-  # All commands can access variables from all files
-```
-</TabItem>
-</Tabs>
-
-#### Command-Specific Environment Files
-
-Specified within individual commands:
-
-<Tabs>
-<TabItem label="Single File">
-```yaml
-commands:
-  deploy:
-    usage: Deploy application
-    env: .env.deploy  # Path is relative to the location of .ahoy.yml
-    cmd: ./deploy.sh
-```
-</TabItem>
-<TabItem label="Multiple Files">
-```yaml
-commands:
-  deploy:
-    usage: Deploy application
-    env:
-      - .env.deploy   # Deployment config
-      - .env.staging  # Environment-specific
-      - .env.secrets  # Sensitive data
-    cmd: ./deploy.sh
-```
-</TabItem>
-</Tabs>
-
-### File Path Resolution Logic
-
-Environment file paths are always relative to the directory containing the `.ahoy.yml` file, not the current working directory. This ensures consistent behaviour regardless of where the command is executed from.
-
-From the implementation in `ahoy.go`:
-
-```go
-if config.Env != "" {
-    globalEnvFile := filepath.Join(AhoyConf.srcDir, config.Env)
-    envVars = append(envVars, getEnvironmentVars(globalEnvFile)...)
-}
-
-// For command-specific env files
-if cmd.Env != "" {
-    cmdEnvFile := filepath.Join(AhoyConf.srcDir, cmd.Env)
-    envVars = append(envVars, getEnvironmentVars(cmdEnvFile)...)
-}
-```
-
-## Environment File Format Specification
-
-Ahoy uses standard shell-style environment files with the following technical specifications:
-
-### Syntax Rules
-
-1. **Line Format**: Each non-empty, non-comment line must define a single variable
-2. **Variable Names**: Can contain letters, numbers, and underscores; conventionally uppercase
-3. **Assignment**: Uses the `=` character with no spaces around it
-4. **Comments**: Lines starting with `#` are ignored
-5. **Inline Comments**: Anything after `#` on a line is ignored
-6. **Whitespace**: Leading/trailing whitespace is trimmed
-7. **Quotes**: Optional for values, required for values with spaces
-8. **Export Keyword**: Optional `export` prefix is accepted but has no effect
-
-### Format Specification
-
-```
-[export] NAME=VALUE[#comment]
-```
-
-Where:
-- `[export]` is optional and ignored by Ahoy
-- `NAME` is the variable name
-- `VALUE` is the variable value
-- `[#comment]` is an optional inline comment
-
-### Examples with Technical Details
-
-```bash
-# Simple variable (no quotes needed for simple values)
-USERNAME=admin
-
-# Variable with spaces (quotes required for spaces)
-FULL_NAME="John Doe"
-
-# Empty variable (valid, sets to empty string)
-CACHE_DIR=
-
-# Comments are ignored (entire line)
-# This line is completely ignored
-
-# Inline comments are ignored (partial line)
-API_KEY=abc123  # This comment is ignored by the parser
-
-# Multi-line variables (newlines preserved in quoted values)
-SSH_KEY="-----BEGIN RSA PRIVATE KEY-----
-MIIEpQIBAAKCAQEA14+bB+QIDAQAB
-...
------END RSA PRIVATE KEY-----"
-
-# Export syntax (recognised but has no special effect in Ahoy)
-export DATABASE_URL=postgres://user:pass@localhost/mydb
-```
-
-### Parser Implementation Details
-
-The environment variable parser in Ahoy:
-1. Reads the file line by line
-2. Trims whitespace from each line
-3. Skips empty lines and lines starting with `#`
-4. Doesn't handle variable interpolation within the file itself
-5. Doesn't support backslash escapes or shell-style substitutions
-
-From `ahoy.go`:
-```go
-func getEnvironmentVars(envFile string) []string {
-    var envVars []string
-    env, err := os.ReadFile(envFile)
-    if err != nil {
-        logger("fatal", "Invalid env file: "+envFile)
-        return nil
-    }
-    lines := strings.Split(string(env), "\n")
-    for _, line := range lines {
-        line = strings.TrimSpace(line)
-        // Ignore empty lines and comments (lines starting with '#').
-        if line == "" || strings.HasPrefix(line, "#") {
-            continue
-        }
-        envVars = append(envVars, line)
-    }
-    return envVars
-}
-```
-
-## Variable Types and Format Specifications
-
-All environment variables in Ahoy are technically strings, but they can represent different types of data through conventional formats:
-
-### Strings
-
-```bash
-# Plain string
-APP_NAME=myapp
-
-# String with spaces (requires quotes)
-APP_DESCRIPTION="My Awesome Application"
-
-# String with special characters
-MESSAGE="Hello, world!"
-```
-
-### Numbers
-
-```bash
-# Integer
-PORT=8080
-
-# Floating point
-TIMEOUT=15.5
-```
-
-### Booleans
-
-```bash
-# Boolean values (interpreted as strings)
-DEBUG=true
-CACHE_ENABLED=false
-```
-
-### Paths
-
-```bash
-# Absolute path
-LOG_DIR=/var/log/myapp
-
-# Relative path
-CONFIG_FILE=./config.json
-
-# Path with environment variable
-PLUGIN_DIR=${HOME}/plugins
-```
-
-### URLs and Connection Strings
-
-```bash
-# URL
-API_ENDPOINT=https://api.example.com
-
-# Database connection string
-DATABASE_URL=postgres://user:password@localhost:5432/mydb
-
-# Complex connection string with parameters
-REDIS_URL=redis://:authpassword@redis.example.com:6379/0?timeout=30s
-```
-
-## Structured Data Handling
-
-While environment variables are inherently string-based, Ahoy commands often need to work with structured data formats. Here are techniques for handling various complex data types in Ahoy environment files:
-
-### JSON Data
-
-JSON data can be stored in environment variables but requires proper escaping of quotes:
-
-```bash
-# Simple JSON object
-CONFIG_JSON="{\"debug\":true,\"timeout\":30,\"retries\":3}"
-
-# To use in commands:
-# echo $CONFIG_JSON | jq '.debug'
-```
-
-When working with JSON data in commands:
-
-```yaml
-commands:
-  process-config:
-    env: .env.json
-    cmd: |
-      echo "Processing config with timeout: $(echo $CONFIG_JSON | jq -r '.timeout')"
-      # Further processing with jq
-```
-
-### YAML Data
-
-For YAML data, you can store it as a multi-line string and process it in commands:
-
-```bash
-# Multi-line YAML stored as a string
-CONFIG_YAML="
-server:
-  port: 8080
-  host: localhost
-logging:
-  level: info
-  file: /var/log/app.log
-"
-```
-
-Usage in commands:
-
-```yaml
-commands:
-  yaml-process:
-    env: .env.yaml
-    cmd: |
-      echo "$CONFIG_YAML" > temp_config.yml
-      yq eval '.server.port' temp_config.yml
-      rm temp_config.yml
-```
-
-### Base64 Encoded Data
-
-For binary data or complex structures, Base64 encoding provides a safe transport mechanism:
-
-```bash
-# Certificate stored as Base64
-SSL_CERT="LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUVwRENDQTR5Z0F3SUJBZ0lKQVBKaW..."
-
-# Binary configuration
-BINARY_CONFIG="SGVsbG8gQWhveSBDb25maWd1cmF0aW9uIQ=="
-```
-
-In commands:
-
-```yaml
-commands:
-  use-cert:
-    env: .env.certs
-    cmd: |
-      echo "$SSL_CERT" | base64 -d > temp.cert
-      # Use certificate
-      rm temp.cert
-```
-
-### Environment Variables as Configuration Files
-
-For complex configurations, you can use environment variables to dynamically generate config files:
-
-```bash
-# Template contents for a config file
-NGINX_CONF="
-server {
-    listen 80;
-    server_name ${DOMAIN_NAME};
-    
-    location / {
-        proxy_pass ${BACKEND_URL};
-    }
-}
-"
-
-# Variables used in the template
-DOMAIN_NAME=example.com
-BACKEND_URL=http://localhost:8080
-```
-
-In your command:
-
-```yaml
-commands:
-  deploy-nginx:
-    env: .env.nginx
-    cmd: |
-      # Perform variable substitution and write config
-      eval "echo \"$NGINX_CONF\"" > nginx.conf
-      # Use the generated config file
-```
-
-## Variable Precedence and Implementation
-
-### Precedence Rules
-
-Ahoy uses a clearly defined precedence order when resolving environment variables. From highest precedence (overrides all others) to lowest:
-
-1. Command-line arguments (passed directly to the command)
-2. Command-specific environment file variables
-3. Global environment file variables
-4. Environment variables from the shell where Ahoy is running
-5. Default values specified in scripts
-
-This means variables defined in a command's environment file will override those with the same name in the global environment file.
-
-### Implementation Details from ahoy.go
-
-The precedence is implemented through the order of append operations in the source code:
-
-```go
-// First get environment variables from the OS
-envVars := os.Environ()
-
-// Then append global environment variables
-if config.Env != "" {
-    globalEnvFile := filepath.Join(AhoyConf.srcDir, config.Env)
-    envVars = append(envVars, getEnvironmentVars(globalEnvFile)...)
-}
-
-// Finally append command-specific environment variables (highest precedence)
-if cmd.Env != "" {
-    cmdEnvFile := filepath.Join(AhoyConf.srcDir, cmd.Env)
-    envVars = append(envVars, getEnvironmentVars(cmdEnvFile)...)
-}
-```
-
-Since later definitions with the same name override earlier ones, this implements the precedence chain.
-
-### Variable Merging Behaviour
-
-When merging environment variables from multiple sources:
-
-1. Variables are processed in order of precedence
-2. If a variable already exists, its value is replaced by the new value
-3. No partial merging occurs for complex values - entire values are replaced
-
-<Aside type="caution">
-Variables passed to commands via the shell's environment may be overridden by identically named variables in your `.env` files. This is by design and allows predictable environment configuration.
+<Aside type="note">
+  Missing env files are silently skipped - specifying a file that doesn't exist is not an error.
 </Aside>
 
-## Command Execution Context
+## Runtime variables <Badge text="v3" variant="success" />
 
-### Environment Variable Injection
+Ahoy automatically injects two variables into every command's environment, regardless of any `env` file configuration:
 
-When Ahoy executes a command, it creates a new process with a carefully constructed environment that includes all resolved variables. The technical implementation:
+| Variable            | Value                             |
+| ------------------- | --------------------------------- |
+| `AHOY_COMMAND_NAME` | The name of the command being run |
+| `AHOY_CMD`          | Path to the ahoy binary           |
 
-```go
-cmd := exec.Command(args[0], args[1:]...)
-cmd.Dir = AhoyConf.srcDir
-cmd.Stdout = os.Stdout
-cmd.Stderr = os.Stderr
-cmd.Stdin = os.Stdin
-cmd.Env = envVars  // All environment variables are injected here
-if err := cmd.Run(); err != nil {
-    // Error handling
-}
-```
+These cannot be overridden by env files.
 
-### Variable Availability in Scripts
+## File format specification
 
-All environment variables are available to commands through standard mechanisms:
+Ahoy env files use standard shell variable format. The parser follows these rules:
 
-<Tabs>
-<TabItem label="Bash">
-```bash
-# Access as $VARIABLE_NAME
-echo "Using database at $DB_HOST:$DB_PORT"
+- One variable per line: `NAME=VALUE`
+- Lines starting with `#` are treated as comments and ignored
+- Empty lines are ignored
+- Leading and trailing whitespace on each line is trimmed
+- The `export` keyword prefix is accepted but has no effect
+- Variable references within values (e.g. `${OTHER_VAR}`) are **not** resolved by Ahoy - they are passed through as literals and may be expanded by the shell when the command runs
 
-# Use parameter expansion for defaults
-TIMEOUT=${TIMEOUT:-30}
-
-# Check if a variable exists
-if [ -n "$DEBUG" ]; then
-  echo "Debug mode enabled"
-fi
-```
-</TabItem>
-<TabItem label="Node.js">
-```javascript
-// Access via process.env
-const dbHost = process.env.DB_HOST;
-const dbPort = process.env.DB_PORT;
-
-console.log(`Connecting to ${dbHost}:${dbPort}`);
-```
-</TabItem>
-<TabItem label="Python">
-```python
-# Access via os.environ
-import os
-
-db_host = os.environ.get('DB_HOST')
-db_port = os.environ.get('DB_PORT', '5432')  # With default
-
-print(f"Connecting to {db_host}:{db_port}")
-```
-</TabItem>
-</Tabs>
-
-### Runtime Variable Manipulation
-
-Commands can modify their own environment variables at runtime, but these changes:
-
-1. Only affect the current command execution
-2. Are not persisted back to the environment files
-3. Are not propagated to other commands
-
-For example:
-
-```yaml
-commands:
-  dynamic-env:
-    cmd: |
-      # Set a new variable at runtime
-      export RUNTIME_VAR="Generated at $(date)"
-      echo "Using $RUNTIME_VAR"
-      # This variable will not be available to other commands
-```
-
-## Error Handling and Edge Cases
-
-### Missing Environment Files
-
-When a specified environment file is missing:
-
-```go
-env, err := os.ReadFile(envFile)
-if err != nil {
-    logger("fatal", "Invalid env file: "+envFile)
-    return nil
-}
-```
-
-Ahoy terminates with a fatal error if it cannot find or read a specified environment file. This is a deliberate design choice to fail fast rather than continue with potentially incomplete configuration.
-
-### Variable Syntax Errors
-
-Lines in `.env` files that don't conform to the expected format are processed as follows:
-
-1. Lines without an `=` character are added to the environment verbatim
-2. This may cause unexpected behaviour in the shell
-3. No syntax validation is performed beyond basic trimming and comment handling
-
-Example of potentially problematic syntax:
+### Examples
 
 ```bash
-# This will be added as-is and may cause shell errors
-INVALID VARIABLE SYNTAX
+# Simple values
+DB_HOST=localhost
+DB_PORT=3306
+APP_NAME=myapp
 
-# This will be added as NAME WITH SPACES=value
-NAME WITH SPACES=value
+# Values with spaces (quotes are part of the value - the shell strips them)
+FULL_NAME="Jane Smith"
+GREETING='Hello, World!'
+
+# Comments are fully ignored
+# This line does nothing
+
+# Inline comments are also ignored
+API_KEY=abc123def456  # production key
+
+# Empty value (sets the variable to an empty string)
+OPTIONAL_VALUE=
+
+# Export prefix (accepted but no special meaning)
+export DATABASE_URL=postgres://user:pass@localhost/myapp
+
+# Multi-line values
+SSH_KEY="-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEA...
+-----END RSA PRIVATE KEY-----"
 ```
 
-### Circular References
+### What the parser does not support
 
-Ahoy doesn't resolve variable references within environment files. If you have:
+- Variable interpolation within the file (`API_URL=${BASE_URL}/api` is passed through literally)
+- Backslash continuation across lines
+- Shell arithmetic or command substitution
 
-```bash
-BASE_URL=http://example.com
-API_URL=${BASE_URL}/api  # This will NOT be resolved
-```
+If you need these, set variables in a shell script and call that script from your `cmd`.
 
-The literal value `${BASE_URL}/api` will be passed to the command. Resolution depends on the shell or script handling:
+## Variable naming
 
-```yaml
-commands:
-  show-urls:
-    env: .env.urls
-    cmd: |
-      # In bash, this works because bash performs the variable substitution
-      echo $API_URL  # Outputs: http://example.com/api
-      
-      # In Node.js, this would not be automatically resolved
-      # process.env.API_URL would contain "${BASE_URL}/api"
-```
+By convention, environment variable names use `UPPER_SNAKE_CASE`. Names can contain letters, digits, and underscores. Names starting with a digit are technically invalid in most shells.
 
-### Character Encoding Issues
+## Security
 
-Environment files should be UTF-8 encoded. Other encodings may cause:
-
-1. Non-ASCII characters to be improperly interpreted
-2. Command failures with encoding-related errors
-3. Unexpected behaviour when passing values to processes
-
-## Technical Troubleshooting
-
-### Diagnostic Tools
-
-When troubleshooting environment variable issues, use these techniques:
-
-```yaml
-commands:
-  debug-env:
-    env: .env.debug
-    cmd: |
-      # Print all environment variables
-      env | sort
-      
-      # Check specific variables
-      echo "DB_HOST=$DB_HOST"
-      echo "API_KEY=${API_KEY:-not set}"
-```
-
-### Common Issues and Solutions
-
-#### Variable Not Available to Command
-
-**Problem**: A variable defined in an environment file isn't accessible in the command.
-
-**Debugging Steps**:
-
-1. Verify the environment file path is correct relative to `.ahoy.yml`
-2. Check for syntax errors in the environment file
-3. Ensure the variable isn't being overridden by another environment source
-4. Add a debug command to print all environment variables
-
-```yaml
-commands:
-  debug:
-    env: .env.debug
-    cmd: env | grep MISSING_VARIABLE
-```
-
-#### Variable Value Unexpected
-
-**Problem**: A variable has an unexpected value.
-
-**Solution**: Check for precedence issues:
-
-```yaml
-commands:
-  check-precedence:
-    cmd: |
-      echo "From shell: $VARIABLE"
-      
-      # Add a temporary environment file with the variable
-      echo "VARIABLE=from-file" > temp.env
-      
-      # Run a command with the file
-      ahoy --env temp.env echo "From file: $VARIABLE"
-      
-      rm temp.env
-```
-
-#### Special Characters in Variables
-
-**Problem**: Special characters in variables causing command failures.
-
-**Solution**: Use proper quoting:
-
-```yaml
-commands:
-  special-chars:
-    env: .env.special
-    cmd: |
-      # Echo with quotes to preserve special characters
-      echo "$SPECIAL_CHARS"
-      
-      # For command arguments that need special character handling
-      grep -F "$SEARCH_PATTERN" filename
-```
-
-#### Multi-line Variables
-
-**Problem**: Multi-line variables being truncated or improperly formatted.
-
-**Solution**: Use proper quoting and temporary files:
-
-```yaml
-commands:
-  multiline:
-    env: .env.multiline
-    cmd: |
-      # Write to a temporary file to preserve formatting
-      echo "$MULTI_LINE_VAR" > temp.txt
-      cat temp.txt
-      rm temp.txt
-```
-
-## Performance Considerations
-
-### File Size Impact
-
-The environment variable system reads files completely into memory:
-
-```go
-env, err := os.ReadFile(envFile)
-```
-
-Very large environment files (multiple megabytes) may impact:
-1. Memory usage
-2. Command startup time
-3. Overall system performance
-
-**Best practice**: Keep environment files under 100KB for optimal performance.
-
-### Environment File Organisation
-
-For complex projects with many variables, consider:
-
-1. **Separate by Environment**: Create different files for different deployment targets:
+Never commit real credentials to version control. A common pattern:
 
 ```
 project/
-├── .ahoy.yml
-├── .env                  # Global, shared variables
-├── .env.development      # Development-specific
-├── .env.staging          # Staging-specific
-├── .env.production       # Production-specific
+├── .env.example    # Committed - contains placeholder values only
+├── .env            # Not committed - contains real local values
+└── .gitignore      # Contains ".env" pattern
 ```
 
-2. **Separate by Function**: Group variables by their functional area:
-
-```
-project/
-├── .ahoy.yml
-├── .env                  # Global, shared variables
-├── .env.database         # Database connection variables
-├── .env.apis             # API keys and endpoints
-├── .env.services         # Service configuration
+```bash
+# .gitignore
+.env
+.env.local
+.env.*.local
+*.secrets
 ```
 
-3. **Command-Specific Organisation**: Create dedicated environment files for specific commands:
+## Organisation patterns
+
+**By environment:**
+
+```
+.env              # Shared defaults
+.env.local        # Developer overrides (not committed)
+.env.staging      # Staging-specific (may be committed)
+.env.production   # Production-specific (not committed)
+```
+
+**By purpose:**
+
+```
+.env              # Global project defaults
+.env.db           # Database credentials
+.env.deploy       # Deployment configuration
+```
+
+**Layered approach** (useful for team projects):
+
+```yaml
+env:
+  - .env.defaults # Committed defaults for the whole team
+  - .env.local # Personal overrides, gitignored
+```
+
+## Accessing variables in commands
+
+Variables are available through standard shell syntax in `bash` commands:
 
 ```yaml
 commands:
-  deploy-prod:
-    usage: Deploy to production
-    env: .env.deploy.production
-    cmd: ./deploy.sh
-    
-  deploy-staging:
-    usage: Deploy to staging
-    env: .env.deploy.staging
-    cmd: ./deploy.sh
+  connect:
+    env: .env.db
+    cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
 ```
 
-4. **Include Version Control Considerations**:
-
-```
-project/
-├── .ahoy.yml
-├── .env.example           # Template with placeholders (committed)
-├── .env                   # Local env vars (not committed)
-├── .env.ci                # CI environment (committed)
-├── .gitignore             # Contains ".env" pattern
-```
-
-### Implementation Technical Details
-
-When organising files, remember these technical implementation facts:
-
-1. Ahoy resolves file paths relative to the `.ahoy.yml` file location
-2. No automatic directory traversal or parent directory lookup occurs
-3. Files are processed in their entirety, not incrementally or partially
-4. No automatic file extension recognition - filenames must be exact
-
-## Integration with Other Tools
-
-Ahoy's environment variable system is designed to interoperate with other common development tools and practices.
-
-### Docker Integration
-
-Environment variables can be passed to Docker containers:
+Or with defaults using bash parameter expansion:
 
 ```yaml
 commands:
-  docker-run:
-    env: .env.docker
-    cmd: |
-      # Pass all environment variables to Docker
-      docker run --rm $(env | grep -E '^(DB_|API_)' | sed 's/^/-e /') image:tag
-      
-      # Or, pass specific variables
-      docker run --rm -e DB_HOST -e DB_USER -e DB_PASS image:tag
+  serve:
+    cmd: python -m http.server ${PORT:-8000}
 ```
 
-### CI/CD Systems
-
-For continuous integration environments:
-
-```yaml
-commands:
-  ci-build:
-    env: .env.ci
-    cmd: |
-      # Travis CI
-      if [ "$TRAVIS" = "true" ]; then
-        echo "Running in Travis CI"
-      fi
-      
-      # GitHub Actions
-      if [ -n "$GITHUB_ACTIONS" ]; then
-        echo "Running in GitHub Actions"
-      fi
-      
-      # Execute the build command
-      ./build.sh
-```
-
-### Credential Management Systems
-
-Integration with credential storage tools:
-
-```yaml
-commands:
-  aws-deploy:
-    cmd: |
-      # Load AWS credentials from credential helper
-      export AWS_ACCESS_KEY_ID=$(aws configure get aws.access_key_id)
-      export AWS_SECRET_ACCESS_KEY=$(aws configure get aws.secret_access_key)
-      
-      # Use credentials
-      aws s3 sync ./dist s3://my-bucket/
-```
-
-### Local Development Tools
-
-Working with local development tools:
-
-```yaml
-commands:
-  init:
-    cmd: |
-      # Check for required tools
-      if ! command -v docker > /dev/null; then
-        echo "Docker not found"
-        exit 1
-      fi
-      
-      # Generate local environment file if not exists
-      if [ ! -f .env ]; then
-        cp .env.example .env
-        echo "Created .env from template"
-      fi
-```
-
-### Technical Implementation Notes
-
-The environment variable system in Ahoy:
-
-1. Is implemented as simple string passing, not as an API or protocol
-2. Doesn't implement secure variable storage or encryption
-3. Relies on the underlying shell or script for variable resolution
-4. Can be extended by writing wrapper scripts that manage credentials or configurations
-
-## See Also and Related Documentation
-
-For more information on environment variables in Ahoy, refer to these resources:
-
-### Internal Documentation
-
-- [Environment Variables Guide](guides/environment) - Practical guide to using environment variables
-- [YAML Configuration Guide](guides/yaml-config) - How to configure environment files in YAML
-- [Command Execution](guides/command-execution) - How environment affects command execution
-- [Docker Integration](examples/docker) - Examples of using Ahoy with Docker
-
-### External Resources
-
-- [The Twelve-Factor App: Config](https://12factor.net/config) - Best practices for configuration in applications
-- [Dotenv Format Specification](https://github.com/bkeepers/dotenv#usage) - Reference for the .env file format
-- [Shell Variable Expansion](https://www.gnu.org/software/bash/manual/html_node/Shell-Parameter-Expansion.html) - Bash documentation for variable expansion patterns
-
-### API and Library References
-
-- [Go's os.Environ()](https://golang.org/pkg/os/#Environ) - The Go function used by Ahoy to read environment variables
-- [os.ReadFile()](https://golang.org/pkg/os/#ReadFile) - Used to read environment files
-- [exec.Command()](https://golang.org/pkg/os/exec/#Command) - Used to execute commands with environment variables
+When using a non-bash entrypoint, access variables through the appropriate mechanism for that runtime (e.g. `process.env.VARIABLE` in Node.js, `os.environ['VARIABLE']` in Python).

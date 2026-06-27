@@ -1,470 +1,109 @@
 ---
-title: Working with Environment Variables
-description: A beginner-friendly guide to using environment variables in Ahoy
-sidebar:
-  order: 4
+title: Environment Variables
+description: Loading environment files and managing configuration in Ahoy
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Aside, Badge } from '@astrojs/starlight/components';
+import { Aside, Badge } from "@astrojs/starlight/components";
 
-# Working with Environment Variables
+Ahoy can load environment variables from files before running your commands, keeping configuration and secrets out of your YAML.
 
-One of Ahoy's most powerful features is its support for environment variables, which helps you manage different configurations and keep sensitive information secure. This guide will walk you through everything you need to know to get started with environment variables in Ahoy.
+## A simple example <Badge text="v2.3.0+" variant="tip" />
 
-## What Are Environment Variables?
-
-Environment variables are dynamic values that can affect how your commands run. In Ahoy, they serve several purposes:
-
-- Store configuration that changes between environments (development, staging, production)
-- Keep sensitive information like passwords and API keys out of your code
-- Make your commands more flexible and reusable
-
-<Aside type="tip">
-  Think of environment variables as placeholders that get filled in when your command runs. This means you can write one command that works across different environments!
-</Aside>
-
-## Getting Started
-
-### Step 1: Create Environment Files
-
-First, create a `.env` file in your project directory:
+Create a `.env` file alongside your `.ahoy.yml`:
 
 ```bash
-# .env
 DB_USER=root
-DB_PASS=root
+DB_PASS=secret
 DB_NAME=myapp
-API_KEY=local_development_key
 ```
 
-### Step 2: Configure Ahoy to Use Your Environment File <Badge text="v2.3.0+" variant="tip" />
-
-In your `.ahoy.yml` file, specify your environment file:
+Reference it in your config:
 
 ```yaml
 ahoyapi: v2
 
-# This is the global environment file
 env: .env
-
-commands:
-  hello:
-    usage: Say hello to the database
-    cmd: echo "Connecting to $DB_NAME as $DB_USER"
-```
-
-### Step 3: Run Your Command
-
-Now when you run `ahoy hello`, you'll see:
-
-```
-Connecting to myapp as root
-```
-
-## Global vs. Command-Specific Variables
-
-Ahoy lets you set both global variables (used by all commands) and command-specific variables. You can use either single files or multiple files for both.
-
-<Tabs>
-<TabItem label="Single Environment File">
-```yaml
-ahoyapi: v2
-env: .env  # Applied to all commands
 
 commands:
   db:
-    usage: Show database info
-    cmd: echo "DB: $DB_NAME, User: $DB_USER"
-  
-  prod-db:
-    usage: Show production database info
-    env: .env.production  # Only applied to this command
-    cmd: echo "PROD DB: $DB_NAME, User: $DB_USER"
+    usage: Connect to the database
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
-</TabItem>
-<TabItem label="Multiple Environment Files">
-<Badge text="v2.5.0+" variant="note" /> **New Feature**
+
+The path is relative to the `.ahoy.yml` file, not your working directory.
+
+## Global and per-command files
+
+The top-level `env` applies to every command. Individual commands can also specify their own `env`, which layers on top:
 
 ```yaml
 ahoyapi: v2
-# Multiple global files loaded in order
-env:
-  - .env.base
-  - .env.local
-  - .env.override
+
+env: .env # Loaded for every command
 
 commands:
   deploy:
-    usage: Deploy to staging
-    # Multiple command-specific files
+    usage: Deploy the application
+    env: .env.deploy # Also loaded for this command only
+    cmd: ./deploy.sh
+```
+
+## Multiple files <Badge text="v2.5.0+" variant="note" />
+
+Both global and per-command `env` fields accept an array. Files are loaded in order - later files override earlier ones:
+
+```yaml
+ahoyapi: v2
+
+env:
+  - .env.base
+  - .env.local # Overrides .env.base
+
+commands:
+  deploy:
     env:
       - .env.deploy
       - .env.staging
-      - .env.secrets
-    cmd: ./deploy.sh
-```
-</TabItem>
-</Tabs>
-
-<Aside type="tip">
-  **Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />: Files are loaded in order, with later files overriding earlier ones. Command-specific files always override global files. This feature maintains full backwards compatibility with single file syntax.
-</Aside>
-
-## Environment File Formats
-
-Environment files follow standard shell format:
-
-```bash
-# Simple variables
-USERNAME=admin
-PASSWORD=secret
-
-# Variables with spaces (use quotes)
-FULL_NAME="John Doe"
-
-# Comments are supported
-# This is a comment
-API_KEY=abc123  # This is an inline comment
-
-# Multi-line values
-SSH_KEY="-----BEGIN RSA PRIVATE KEY-----
-MIIEpQIBAAKCAQEA14+bB+QIDAQAB
-...
------END RSA PRIVATE KEY-----"
-```
-
-## Practical Examples
-
-### Database Connections
-
-Create environment files for different database configurations:
-
-<Tabs>
-<TabItem label=".env (local)">
-```bash
-DB_USER=root
-DB_PASS=root
-DB_NAME=myapp_dev
-DB_HOST=localhost
-```
-</TabItem>
-<TabItem label=".env.staging">
-```bash
-DB_USER=staging_user
-DB_PASS=staging_pass
-DB_NAME=myapp_staging
-DB_HOST=staging.db.example.com
-```
-</TabItem>
-</Tabs>
-
-Then configure your commands to use them:
-
-```yaml
-commands:
-  mysql:
-    usage: Connect to the local database
-    cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
-  
-  staging-mysql:
-    usage: Connect to the staging database
-    env: .env.staging
-    cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
-```
-
-### Docker Development Environment
-
-Create a specialised environment file for Docker:
-
-```bash
-# .env.docker
-COMPOSE_PROJECT_NAME=myapp
-DOCKER_BUILDKIT=1
-WEB_PORT=8080
-DB_PORT=3306
-```
-
-And use it in your Docker commands:
-
-```yaml
-commands:
-  up:
-    usage: Start Docker environment
-    env: .env.docker
-    cmd: docker-compose up -d
-  
-  down:
-    usage: Stop Docker environment
-    env: .env.docker
-    cmd: docker-compose down
-```
-
-### Dynamic Configuration Selection
-
-Create a command that works with multiple environments:
-
-```yaml
-commands:
-  deploy:
-    usage: Deploy to specified environment (dev, staging, prod)
-    cmd: |
-      if [ -f ".env.$1" ]; then
-        source .env.$1
-        echo "Deploying to $1 environment..."
-        ./deploy.sh --environment $1 --api-key $API_KEY
-      else
-        echo "Unknown environment: $1"
-        echo "Available environments:"
-        ls -1 .env.* | sed 's/\.env\.//'
-        exit 1
-      fi
-```
-
-Run it with: `ahoy deploy staging`
-
-## Security Best Practices
-
-1. **Never commit sensitive environment files to version control**
-   
-   Add to your `.gitignore`:
-   ```
-   .env*
-   !.env.example
-   ```
-
-2. **Provide example files** with dummy values:
-   
-   ```bash
-   # .env.example
-   DB_USER=username
-   DB_PASS=password
-   API_KEY=your_api_key_here
-   ```
-
-3. **Validate required variables** before running sensitive operations:
-   
-   ```yaml
-   commands:
-     deploy:
-       env: .env.production
-       cmd: |
-         # Check for required variables
-         for var in "API_KEY" "DEPLOY_TOKEN"; do
-           if [ -z "${!var}" ]; then
-             echo "Error: $var is not set"
-             exit 1
-           fi
-         done
-         
-         # Proceed with deployment
-         ./deploy.sh
-   ```
-
-## Troubleshooting
-
-<Tabs>
-<TabItem label="Variable Not Found">
-Check that:
-- Your environment file exists and is correctly referenced in the `.ahoy.yml`
-- The path is relative to where you're running the `ahoy` command
-- The variable name is spelled correctly (including case)
-- There are no syntax errors in your environment file
-- You're not overriding the variable elsewhere
-
-Try running your command with debug mode to see what environment variables are being loaded:
-```bash
-AHOY_VERBOSE=true ahoy your-command
-```
-</TabItem>
-
-<TabItem label="Permission Issues">
-If you're getting permission errors:
-- Make sure your environment files have the correct permissions
-  ```bash
-  chmod 600 .env* # Makes the files readable only by you
-  ```
-- Check that the user running the `ahoy` command has permission to read the environment files
-- If you're in a Docker container, ensure volumes are mounted correctly
-</TabItem>
-
-<TabItem label="Values With Special Characters">
-Special characters in environment values can cause problems:
-- Wrap values with quotes if they contain spaces or special characters
-  ```bash
-  # Bad
-  MESSAGE=Hello, World!
-  
-  # Good
-  MESSAGE="Hello, World!"
-  ```
-- Be careful with quotes and escape sequences in variable values
-- If a command uses the variable in a shell context, consider additional escaping:
-  ```yaml
-  commands:
-    echo:
-      cmd: |
-        # Escape quotes for shell execution
-        echo "${MESSAGE//\"/\\\"}"
-  ```
-</TabItem>
-
-<TabItem label="Multiple Environment Files">
-When using multiple environment files:
-- Remember that command-specific environment files override global ones
-- Files are not merged; they replace each other
-- If a command has its own `env` property, the global `env` is ignored
-- Debug environment loading with `AHOY_VERBOSE=true`
-</TabItem>
-</Tabs>
-
-## Multiple Environment Files <Badge text="v2.5.0+" variant="note" />
-
-Ahoy supports loading multiple environment files (added in v2.5.0), which is perfect for layered configuration setups.
-
-### Basic Multiple Files Usage <Badge text="v2.5.0+" variant="tip" size="small" />
-
-```yaml
-ahoyapi: v2
-
-# Load multiple files in order
-env:
-  - .env.base      # Base configuration
-  - .env.local     # Local overrides
-  - .env.override  # Final overrides
-
-commands:
-  start:
-    usage: Start with layered configuration
-    cmd: echo "Starting with DB: $DB_NAME, Port: $PORT"
-```
-
-### Practical Example: Environment Layers
-
-Create these environment files:
-
-<Tabs>
-<TabItem label=".env.base">
-```bash
-# Base configuration for all environments
-APP_NAME=MyApp
-DB_HOST=localhost
-DB_PORT=3306
-DEBUG=false
-```
-</TabItem>
-<TabItem label=".env.local">
-```bash
-# Local development overrides
-DEBUG=true
-DB_NAME=myapp_dev
-API_URL=http://localhost:8080
-```
-</TabItem>
-<TabItem label=".env.override">
-```bash
-# Final overrides (maybe from CI/CD)
-DB_PASSWORD=local_dev_password
-```
-</TabItem>
-</Tabs>
-
-With this setup, the final configuration will be:
-- `APP_NAME=MyApp` (from base)
-- `DB_HOST=localhost` (from base)
-- `DEBUG=true` (overridden by local)
-- `DB_NAME=myapp_dev` (from local)
-- `DB_PASSWORD=local_dev_password` (from override)
-
-### Command-Specific Multiple Files <Badge text="v2.5.0+" variant="tip" size="small" />
-
-```yaml
-ahoyapi: v2
-
-env:
-  - .env.base
-  - .env.local
-
-commands:
-  deploy-staging:
-    usage: Deploy to staging environment
-    env:
-      - .env.deploy      # Deployment-specific config
-      - .env.staging     # Staging environment config
-      - .env.secrets     # Sensitive staging credentials
     cmd: ./deploy.sh staging
-
-  deploy-production:
-    usage: Deploy to production environment
-    env:
-      - .env.deploy      # Same deployment config
-      - .env.production  # Production environment config
-      - .env.prod-secrets # Production credentials
-    cmd: ./deploy.sh production
 ```
 
-### Benefits of Multiple Files
+Missing files are silently skipped - no error.
 
-1. **Separation of Concerns**: Keep different types of configuration separate
-2. **Environment Inheritance**: Base configuration with environment-specific overrides
-3. **Security**: Keep secrets in separate files that can be managed differently
-4. **Team Collaboration**: Share base config while allowing personal overrides
-5. **CI/CD Integration**: Layer in build-specific configuration
+## Precedence
 
-### File Loading Order <Badge text="v2.5.0+" variant="tip" size="small" />
+From lowest to highest:
 
-Files are processed in the order specified, with later files overriding earlier ones:
+1. Your shell's existing environment
+2. Global env files (in order)
+3. Command-specific env files (in order)
 
-```yaml
-env:
-  - .env.defaults    # 1st: Default values
-  - .env.shared      # 2nd: Shared team config (overrides defaults)
-  - .env.local       # 3rd: Personal config (overrides shared)
-  - .env.override    # 4th: Final overrides (overrides everything)
+## Runtime variables <Badge text="v3" variant="success" />
+
+Ahoy automatically injects two variables into every command:
+
+| Variable            | Value                             |
+| ------------------- | --------------------------------- |
+| `AHOY_COMMAND_NAME` | The name of the command being run |
+| `AHOY_CMD`          | Path to the ahoy binary           |
+
+These are useful for scripts that call other ahoy commands, or need to know their own name.
+
+## Keep secrets out of version control
+
+Add your real `.env` files to `.gitignore` and commit a `.env.example` with placeholder values:
+
 ```
-
-If the same variable appears in multiple files, the last one wins.
-
-## Advanced Usage
-
-### Overriding Variables at Runtime
-
-You can override environment variables directly from the command line:
+# .gitignore
+.env
+.env.local
+.env.secrets
+```
 
 ```bash
-DB_NAME=custom_db ahoy mysql
+# .env.example - safe to commit
+DB_USER=your_username
+DB_PASS=your_password
+DB_NAME=your_database
 ```
 
-This is useful for one-off tasks without modifying your environment files.
-
-### Using Environment Variables in YAML
-
-You can use environment variables directly in your YAML file by using the `$VARIABLE` syntax:
-
-```yaml
-ahoyapi: v2
-env: .env
-
-commands:
-  create-db:
-    usage: Create a new database
-    cmd: echo "Creating database $DB_NAME"
-  
-  connect:
-    usage: Connect to database
-    # Use the CLI tool specified in an environment variable
-    cmd: $DB_CLIENT -u$DB_USER -p$DB_PASS $DB_NAME
-```
-
-## Conclusion
-
-Environment variables provide a powerful way to make your Ahoy commands flexible, secure, and adaptable to different scenarios. By following the practices in this guide, you can:
-
-- Keep sensitive information secure
-- Create reusable commands that work across environments
-- Simplify your workflow with environment-specific configurations
-- Build more maintainable scripts
-
-Remember that good environment variable management is key to creating an effective Ahoy workflow. Start with simple usage patterns, document your environment requirements, and gradually introduce more advanced techniques as your projects grow.
-
-For more detailed technical information about environment variables in Ahoy, check out the [Environment Variables Reference](/reference/environment/).
+For the complete format specification and precedence details, see the [Environment Reference](/reference/environment).
