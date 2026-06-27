@@ -1,116 +1,57 @@
 ---
 title: Shell Autocompletion
-description: Set up tab completion for Ahoy commands in your shell
+description: Set up tab completion for Ahoy commands
 ---
 
-import { Tabs, TabItem } from '@astrojs/starlight/components';
-import { Steps } from '@astrojs/starlight/components';
-import { Card, CardGrid } from '@astrojs/starlight/components';
-import { Aside, Badge } from '@astrojs/starlight/components';
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
 
-# Shell Autocompletion
+Ahoy supports tab completion in both Zsh and Bash, completing command names and aliases from your `.ahoy.yml`.
 
-Ahoy supports command autocompletion (tab completion) in both Zsh and Bash. Setting up shell autocompletion will make your Ahoy workflow faster and more efficient by:
+## Zsh
 
-- Allowing you to press tab to complete command names
-- Showing available commands when you press tab after typing `ahoy `
-- Completing command aliases as well as primary command names
+There's a dedicated plugin at [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy) that works with all major Zsh plugin managers.
 
-<CardGrid>
-  <Card title="Productivity Boost" icon="rocket">
-    Tab completion saves time and reduces typing errors when working with complex command names.
-  </Card>
-  <Card title="Self-Documenting" icon="document">
-    Discover available commands just by pressing tab, making it easier to learn and use Ahoy.
-  </Card>
-</CardGrid>
+1. Visit the [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy) repository and follow the installation instructions for your plugin manager (Oh My Zsh, Antigen, zinit, or manual).
+2. Reload your shell or open a new terminal.
+3. Type `ahoy ` (with a space) and press Tab - you should see your commands listed.
 
-## Setting Up Autocompletion
+## Bash
+
+**Step 1:** Make sure bash-completion is installed:
 
 <Tabs>
-  <TabItem label="Zsh"> <Badge text="v2.3.0+" variant="tip" size="small" />
-    For Zsh users, there's a dedicated plugin available that provides robust completion support for Ahoy commands.
-
-    <Steps>
-      1. Visit the [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy) repository
-      
-      2. Follow the installation instructions to add the plugin to your Zsh setup
-      
-      3. The plugin works with popular Zsh frameworks including:
-         - Oh My Zsh
-         - Antigen
-         - zplug
-         - zinit
-         - And manual installation
-    </Steps>
-
-    <Aside type="tip">
-      **Zsh Plugin Added in v2.3.0**: If you're using Oh My Zsh, you can add `zsh-ahoy` to your plugins list in your `.zshrc` file:
-      ```bash
-      plugins=(... zsh-ahoy)
-      ```
-    </Aside>
+  <TabItem label="macOS">
+    ```bash
+    brew install bash-completion
+    ```
   </TabItem>
-
-  <TabItem label="Bash">
-    For Bash users, you'll need to make sure bash-completion is installed and properly set up.
-
-    <Steps>
-      1. Ensure bash-completion is installed on your system:
-         ```bash
-         # On Ubuntu/Debian
-         sudo apt install bash-completion
-         
-         # On macOS with Homebrew
-         brew install bash-completion
-         ```
-      
-      2. Add the following to your `~/.bashrc` file (create it if it doesn't exist):
-         ```bash
-         if [ -f /etc/bash_completion ]; then
-           . /etc/bash_completion
-         fi
-         ```
-      
-      3. Run the following command to get the Ahoy completion script and install it:
-         ```bash
-         mkdir -p ~/.bash_completion.d
-         ahoy --generate-bash-completion > ~/.bash_completion.d/ahoy
-         echo '. ~/.bash_completion.d/ahoy' >> ~/.bashrc
-         ```
-      
-      4. Reload your shell configuration:
-         ```bash
-         source ~/.bashrc
-         ```
-    </Steps>
-
-    <Aside type="caution">
-      The exact location of the bash-completion file may vary depending on your Linux distribution or macOS setup. Adjust the paths accordingly.
-    </Aside>
+  <TabItem label="Ubuntu / Debian">
+    ```bash
+    sudo apt install bash-completion
+    ```
   </TabItem>
 </Tabs>
 
-## Testing Your Setup
+**Step 2:** Generate the completion script and install it:
 
-After installing shell completion, you can test if it's working properly:
+```bash
+mkdir -p ~/.bash_completion.d
+ahoy --generate-bash-completion > ~/.bash_completion.d/ahoy
+echo '. ~/.bash_completion.d/ahoy' >> ~/.bashrc
+```
 
-1. Open a new terminal window or reload your shell configuration
-2. Type `ahoy ` (with a space at the end) and press Tab
-3. You should see a list of available Ahoy commands
-4. If you have configured aliases for commands, try typing the beginning of an alias and press Tab to see if it completes
+**Step 3:** Reload your configuration:
 
-## Troubleshooting
+```bash
+source ~/.bashrc
+```
 
-If autocompletion isn't working as expected, try these steps:
+## Testing your setup
 
-- Make sure Ahoy is properly installed and in your PATH
-- Verify that your shell completion system is working (try other commands that have completion)
-- Check that you've reloaded your shell configuration after setting up completion
-- For Zsh users, ensure the zsh-ahoy plugin is correctly installed
-- For Bash users, confirm the completion script was successfully generated and sourced
+Open a new terminal, type `ahoy ` and press Tab. You should see a list of your available commands. Aliases are completed alongside primary command names.
 
 <Aside type="note">
-  Shell completion will only show commands that are available in your current context. Make sure you're in a directory with an `.ahoy.yml` file, or one of its subdirectories, to see project-specific commands.
+  Completion only shows commands available in the current context. Make sure you're inside a project
+  with an `.ahoy.yml` file (or one of its subdirectories) to see project commands.
 </Aside>
-
