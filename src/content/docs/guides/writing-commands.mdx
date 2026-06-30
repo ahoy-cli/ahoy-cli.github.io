@@ -1,0 +1,212 @@
+---
+title: Writing Commands
+description: Practical patterns for writing great Ahoy commands
+---
+
+import { Aside, Badge } from "@astrojs/starlight/components";
+
+Ahoy commands are shell commands wrapped in YAML. This guide covers the patterns that make them readable, reusable, and a pleasure for your whole team to use.
+
+## A minimal command
+
+Every command needs a name and a `cmd`. Everything else is optional but encouraged:
+
+```yaml
+ahoyapi: v2
+
+commands:
+  hello:
+    usage: Say hello to someone
+    cmd: echo "Hello, $1!"
+```
+
+The `usage` line is what your team sees when they run `ahoy` - make it count.
+
+## Arguments
+
+Arguments are passed through as standard bash positional parameters:
+
+```yaml
+commands:
+  shell:
+    usage: Open a shell in a container
+    cmd: docker compose exec $1 bash
+
+  copy:
+    usage: Copy a file between containers
+    cmd: docker compose cp $1 $2
+
+  run:
+    usage: Run any command in the app container
+    cmd: docker compose exec app $@
+```
+
+`$1`, `$2` for specific positions; `$@` to forward everything. The last pattern is great for transparent wrappers:
+
+```bash
+ahoy run npm test -- --watch
+```
+
+## Multi-line scripts
+
+Use the YAML block scalar (`|`) for anything beyond a single line. Standard bash applies:
+
+```yaml
+commands:
+  setup:
+    usage: Initialise the project from scratch
+    cmd: |
+      echo "Installing dependencies..."
+      npm install
+
+      echo "Running migrations..."
+      ./migrate.sh
+
+      echo "All done. Run 'ahoy start' to begin."
+```
+
+## Descriptions for complex commands <Badge text="v3" variant="success" />
+
+`usage` is the one-liner shown in the listing. `description` is fuller help shown when someone runs `ahoy help <command>`:
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy the application
+    description: |
+      Deploys to the specified environment, running tests and building
+      assets first. Requires .env.deploy to be configured.
+
+      Usage:
+        ahoy deploy staging
+        ahoy deploy production
+
+      The production deploy will prompt for confirmation unless CI=true
+      is set in the environment.
+    cmd: ./scripts/deploy.sh $1
+```
+
+## Aliases <Badge text="v2.1.0+" variant="tip" />
+
+Short names for commonly-used commands. They appear in the help listing alongside the primary name:
+
+```yaml
+commands:
+  start-dev:
+    usage: Start the development environment
+    aliases: ["up", "start"]
+    cmd: docker compose up -d
+
+  open-shell:
+    usage: Open a shell in the app container
+    aliases: ["shell", "sh", "bash"]
+    cmd: docker compose exec app bash
+```
+
+A good rule of thumb: use a descriptive primary name and short aliases for the commands you type dozens of times a day.
+
+## Chaining commands
+
+Call other Ahoy commands from within a command - Ahoy is always on the path:
+
+```yaml
+commands:
+  ci:
+    usage: Run the full CI pipeline locally
+    cmd: |
+      ahoy lint
+      ahoy test
+      ahoy build
+
+  fresh:
+    usage: Tear down and rebuild everything
+    cmd: |
+      ahoy down
+      docker compose build --no-cache
+      ahoy up
+      ahoy install
+```
+
+## Protecting destructive operations
+
+A `confirm` helper is a useful pattern for commands that can't be undone. The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml) includes a battle-tested implementation that supports both interactive use and automation (via `AHOY_CONFIRM_RESPONSE=y`):
+
+```yaml
+commands:
+  db:reset:
+    usage: Reset the database to a clean state
+    cmd: |
+      ahoy confirm "This will destroy all database data. Continue?" || exit 0
+      docker compose exec db mysql -u"$DB_USER" -p"$DB_PASS" -e \
+        "DROP DATABASE IF EXISTS \`$DB_NAME\`; CREATE DATABASE \`$DB_NAME\`;"
+      echo "Database reset."
+
+  confirm:
+    hide: true
+    cmd: |
+      if [ -z "${AHOY_CONFIRM_RESPONSE}" ]; then
+        read -r -p ">> $1 [y/N] " AHOY_CONFIRM_RESPONSE
+        RESPONSE_LOWER=$(printf '%s' "${AHOY_CONFIRM_RESPONSE}" | tr '[:upper:]' '[:lower:]')
+        if [ "$RESPONSE_LOWER" != "y" ] && [ "$RESPONSE_LOWER" != "yes" ]; then
+          echo "Cancelled."
+          exit 1
+        fi
+      else
+        echo ">> $1 [y/N] ${AHOY_CONFIRM_RESPONSE}"
+        [ "${AHOY_CONFIRM_WAIT_SKIP}" != "1" ] && sleep 3
+      fi
+```
+
+The `hide: true` field keeps internal helpers out of the listing without disabling them.
+
+## Wrapper commands
+
+Ahoy is excellent for wrapping long container commands so they feel native:
+
+```yaml
+commands:
+  drush:
+    usage: Run Drush in the CLI container
+    cmd: docker compose exec cli drush --root=/var/www/html/web "$@"
+
+  composer:
+    usage: Run Composer in the CLI container
+    cmd: docker compose exec cli composer "$@"
+
+  node:
+    usage: Run Node.js commands in the app container
+    cmd: docker compose exec app node "$@"
+```
+
+Then your team just runs `ahoy drush cache:rebuild` or `ahoy composer require vendor/package`.
+
+## Environment-specific commands <Badge text="v2.3.0+" variant="tip" />
+
+Use the `env` field for commands that need their own configuration:
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy to staging
+    env: .env.deploy
+    cmd: |
+      echo "Deploying to $DEPLOY_HOST..."
+      rsync -avz ./dist/ $DEPLOY_HOST:$DEPLOY_PATH
+```
+
+See the [Environment guide](/guides/environment) for the full picture on env files and precedence.
+
+## Real-world examples
+
+The repository includes ready-to-use example files you can copy and adapt:
+
+- **[examples.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)** - the comprehensive starter file (30+ commands covering Docker, databases, testing, Drupal, deployment, and more). Download it with `ahoy config init`.
+- **[docker.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/docker.ahoy.yml)** - a focused set of Docker Compose commands, useful as an import in your own config.
+- **[confirmation.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/confirmation.ahoy.yml)** - a standalone confirmation helper you can import.
+
+<Aside type="tip">
+  The best way to learn is to read `examples.ahoy.yml` - it demonstrates nearly every Ahoy feature
+  with real, usable commands. Run `ahoy config init` to drop it into your project.
+</Aside>
+
+For the complete field-by-field specification, see the [YAML Schema reference](/reference/yaml-schema).

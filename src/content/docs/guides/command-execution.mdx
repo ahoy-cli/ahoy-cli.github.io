@@ -1,0 +1,122 @@
+---
+title: Command Execution
+description: How Ahoy finds and runs your commands
+---
+
+## How Ahoy finds your config
+
+When you run an Ahoy command, it:
+
+1. Checks for a `--file` (or `-f`) flag to use a specific config file
+2. Otherwise, searches upward from the current directory for `.ahoy.yml`
+3. Changes to the directory containing that file
+4. Executes your command relative to that directory
+
+This means you can run `ahoy` from any subdirectory in your project and it always behaves consistently.
+
+## Arguments
+
+Arguments are passed to commands as bash positional parameters:
+
+```yaml
+commands:
+  greet:
+    cmd: echo "Hello, $1!"
+
+  copy:
+    cmd: cp $1 $2
+
+  run-in-container:
+    cmd: docker-compose exec app $@
+```
+
+```bash
+ahoy greet World              # Hello, World!
+ahoy copy src.txt dest.txt
+ahoy run-in-container npm test
+```
+
+`$@` passes all arguments through, which is handy for wrapper commands. Use `$#` to check the argument count, and `$0` for the command name.
+
+## Interactive commands
+
+Ahoy's stdin is connected directly to your terminal, so interactive commands work without any special setup:
+
+```yaml
+commands:
+  shell:
+    usage: Open a shell in the app container
+    cmd: docker-compose exec app bash
+
+  mysql:
+    usage: Open a MySQL shell
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+These run fully interactively - you get a real prompt, readline support, and piping all work as expected.
+
+## Chaining commands
+
+You can call other Ahoy commands from within a command:
+
+```yaml
+commands:
+  ci:
+    usage: Run the full CI pipeline locally
+    cmd: |
+      ahoy install
+      ahoy lint
+      ahoy test
+
+  install:
+    cmd: npm install
+
+  lint:
+    cmd: npm run lint
+
+  test:
+    cmd: npm test
+```
+
+## Custom entrypoints
+
+The default entrypoint is `bash -c '{{cmd}}'`. Override it at the file level to use a different interpreter:
+
+```yaml
+ahoyapi: v2
+
+entrypoint:
+  - node
+  - "-e"
+  - "{{cmd}}"
+
+commands:
+  hello:
+    cmd: console.log("Hello from Node.js!")
+```
+
+```yaml
+ahoyapi: v2
+
+entrypoint:
+  - python3
+  - "-c"
+  - "{{cmd}}"
+
+commands:
+  hello:
+    cmd: print("Hello from Python!")
+```
+
+Entrypoint template variables:
+
+- `{{cmd}}` - replaced with the command body
+- `{{name}}` - replaced with the command name (also available as `$0`)
+
+## Exit codes
+
+Ahoy passes exit codes through unchanged. If a command exits non-zero, Ahoy exits non-zero. This works naturally with shell pipelines:
+
+```bash
+ahoy test && ahoy deploy
+```

@@ -1,0 +1,97 @@
+---
+title: Getting Started with Ahoy
+description: Install Ahoy and run your first commands
+---
+
+import { Tabs, TabItem } from "@astrojs/starlight/components";
+import { Aside } from "@astrojs/starlight/components";
+
+## Installation
+
+<Tabs>
+  <TabItem label="macOS">
+    ```bash
+    brew install ahoy
+    ```
+  </TabItem>
+  <TabItem label="Linux">
+    ```bash
+    os=$(uname -s | tr '[:upper:]' '[:lower:]') && architecture=$(case $(uname -m) in x86_64 | amd64) echo "amd64" ;; aarch64 | arm64 | armv8) echo "arm64" ;; *) echo "amd64" ;; esac) && sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
+    ```
+
+    Or download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases) and place the binary somewhere in your `$PATH`.
+
+  </TabItem>
+  <TabItem label="Windows (WSL2)">
+    Use the Linux instructions above.
+  </TabItem>
+</Tabs>
+
+Verify it's working:
+
+```bash
+ahoy --version
+```
+
+## Start with examples
+
+The quickest way to get going is to initialise a project with our curated examples file. It includes 30+ ready-to-use commands for common development workflows.
+
+```bash
+cd my-project
+ahoy config init
+```
+
+This creates an `.ahoy.yml` in the current directory. Run `ahoy` on its own to see what's available:
+
+```bash
+ahoy
+```
+
+<Aside type="tip">
+  Want to inspect the file before downloading? The examples file is at
+  [`examples/examples.ahoy.yml`](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)
+  in the repository.
+</Aside>
+
+## Write your own commands
+
+Create an `.ahoy.yml` file in your project root:
+
+```yaml
+ahoyapi: v2
+
+commands:
+  hello:
+    usage: Say hello to someone
+    cmd: echo "Hello, $1!"
+
+  start:
+    usage: Start the dev environment
+    cmd: docker-compose up -d
+
+  logs:
+    usage: Follow container logs
+    cmd: docker-compose logs -f $@
+```
+
+Run your commands from anywhere in the project tree:
+
+```bash
+ahoy hello World   # Hello, World!
+ahoy start
+ahoy logs web
+ahoy              # Shows all commands and their usage text
+```
+
+<Aside type="note">
+  Ahoy searches up the directory tree for `.ahoy.yml`, so you can run commands from any subdirectory
+  in your project.
+</Aside>
+
+## Next steps
+
+- [Writing Commands](/guides/writing-commands) - practical patterns and real-world examples
+- [Shell Autocompletion](/guides/shell-autocompletion) - set up tab completion
+- [YAML Schema Reference](/reference/yaml-schema) - complete field-by-field reference
+- [CLI Reference](/reference/cli) - all command-line flags and built-in commands

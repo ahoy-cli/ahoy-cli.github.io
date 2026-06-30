@@ -1,0 +1,69 @@
+---
+title: Next Steps
+description: What to explore after the basics
+sidebar:
+  order: 2
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+You've got Ahoy installed and your first commands running. Here's where to go next.
+
+## Guides
+
+<CardGrid>
+  <Card title="Writing Commands" icon="document">
+    Practical patterns for arguments, aliases, multi-line scripts, chaining, and real-world examples.
+
+    [Writing Commands →](/guides/writing-commands)
+
+  </Card>
+
+  <Card title="Command Execution" icon="seti:shell">
+    Understand how Ahoy finds your config, passes arguments, handles interactive commands, and supports custom entrypoints.
+
+    [Command Execution →](/guides/command-execution)
+
+  </Card>
+
+  <Card title="Importing & Overriding" icon="puzzle">
+    Split commands across multiple YAML files and use the override system to adapt shared command sets.
+
+    [Importing & Overriding →](/guides/importing)
+
+  </Card>
+
+  <Card title="Environment Variables" icon="setting">
+    Load `.env` files globally or per-command, stack multiple files, and manage configuration across environments.
+
+    [Environment →](/guides/environment)
+
+  </Card>
+
+</CardGrid>
+
+## Reference
+
+<CardGrid>
+  <Card title="YAML Schema" icon="list-format">
+    Complete technical reference for every field supported in `.ahoy.yml`.
+
+    [YAML Schema →](/reference/yaml-schema)
+
+  </Card>
+
+  <Card title="CLI Reference" icon="laptop">
+    All command-line flags, built-in commands, and config file discovery rules.
+
+    [CLI Reference →](/reference/cli)
+
+  </Card>
+
+  <Card title="Environment Reference" icon="information">
+    Full specification for the environment file format, variable precedence, and Ahoy's runtime variables.
+
+    [Environment Reference →](/reference/environment)
+
+  </Card>
+
+</CardGrid>

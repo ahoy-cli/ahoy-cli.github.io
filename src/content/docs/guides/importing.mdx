@@ -1,0 +1,138 @@
+---
+title: Importing & Overriding
+description: Splitting commands across multiple files and overriding inherited commands
+---
+
+import { Aside, Badge } from "@astrojs/starlight/components";
+
+As your command set grows, you can split it across multiple YAML files using `imports`.
+
+## Basic imports
+
+A command with `imports` instead of `cmd` becomes a namespace for subcommands loaded from other files:
+
+```yaml
+# .ahoy.yml
+ahoyapi: v2
+
+commands:
+  db:
+    usage: Database commands
+    imports:
+      - ./.ahoy/db.ahoy.yml
+```
+
+```yaml
+# .ahoy/db.ahoy.yml
+ahoyapi: v2
+
+commands:
+  backup:
+    usage: Backup the database
+    cmd: mysqldump -u$DB_USER -p$DB_PASS $DB_NAME > backup.sql
+
+  restore:
+    usage: Restore from a backup file
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME < $1
+```
+
+This gives you `ahoy db backup` and `ahoy db restore`.
+
+## Optional imports <Badge text="v2.2.0+" variant="tip" />
+
+Mark an import as `optional: true` to silently skip the whole command if none of its files can be found. Useful for local or team-specific command sets that not everyone has:
+
+```yaml
+ahoyapi: v2
+
+commands:
+  local:
+    usage: Local development extras
+    optional: true
+    imports:
+      - ./local.ahoy.yml
+```
+
+If `local.ahoy.yml` doesn't exist, `ahoy local` simply won't appear in the listing. Without `optional: true`, a missing import file is a fatal error.
+
+## Overriding commands
+
+Ahoy uses a "last in wins" rule. When the same command name appears in multiple imported files, the last definition wins:
+
+```yaml
+# .ahoy/base.ahoy.yml
+ahoyapi: v2
+
+commands:
+  test:
+    usage: Run tests
+    cmd: npm test
+```
+
+```yaml
+# .ahoy.yml
+ahoyapi: v2
+
+commands:
+  shared:
+    imports:
+      - ./.ahoy/base.ahoy.yml
+
+  test:
+    usage: Run tests with coverage
+    cmd: npm test -- --coverage
+```
+
+The top-level `test` command overrides the imported one.
+
+## Typical structure
+
+A common pattern for larger projects:
+
+```
+project/
+├── .ahoy.yml
+└── .ahoy/
+    ├── db.ahoy.yml
+    ├── docker.ahoy.yml
+    └── deploy.ahoy.yml
+```
+
+```yaml
+# .ahoy.yml
+ahoyapi: v2
+
+commands:
+  db:
+    usage: Database commands
+    imports:
+      - ./.ahoy/db.ahoy.yml
+
+  docker:
+    usage: Container commands
+    imports:
+      - ./.ahoy/docker.ahoy.yml
+
+  deploy:
+    usage: Deployment commands
+    imports:
+      - ./.ahoy/deploy.ahoy.yml
+```
+
+<Aside type="note">
+  Import paths are relative to the directory containing the file that declares them, not your
+  working directory.
+</Aside>
+
+## Sharing commands across projects
+
+Import paths can traverse outside the project directory, which makes it possible to maintain shared command libraries:
+
+```yaml
+commands:
+  shared:
+    imports:
+      - ../../shared-ahoy/docker.ahoy.yml
+```
+
+Each imported file must also declare `ahoyapi: v2`.

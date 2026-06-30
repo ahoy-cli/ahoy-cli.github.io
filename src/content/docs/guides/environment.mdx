@@ -1,0 +1,109 @@
+---
+title: Environment Variables
+description: Loading environment files and managing configuration in Ahoy
+---
+
+import { Aside, Badge } from "@astrojs/starlight/components";
+
+Ahoy can load environment variables from files before running your commands, keeping configuration and secrets out of your YAML.
+
+## A simple example <Badge text="v2.3.0+" variant="tip" />
+
+Create a `.env` file alongside your `.ahoy.yml`:
+
+```bash
+DB_USER=root
+DB_PASS=secret
+DB_NAME=myapp
+```
+
+Reference it in your config:
+
+```yaml
+ahoyapi: v2
+
+env: .env
+
+commands:
+  db:
+    usage: Connect to the database
+    cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
+```
+
+The path is relative to the `.ahoy.yml` file, not your working directory.
+
+## Global and per-command files
+
+The top-level `env` applies to every command. Individual commands can also specify their own `env`, which layers on top:
+
+```yaml
+ahoyapi: v2
+
+env: .env # Loaded for every command
+
+commands:
+  deploy:
+    usage: Deploy the application
+    env: .env.deploy # Also loaded for this command only
+    cmd: ./deploy.sh
+```
+
+## Multiple files <Badge text="v2.5.0+" variant="note" />
+
+Both global and per-command `env` fields accept an array. Files are loaded in order - later files override earlier ones:
+
+```yaml
+ahoyapi: v2
+
+env:
+  - .env.base
+  - .env.local # Overrides .env.base
+
+commands:
+  deploy:
+    env:
+      - .env.deploy
+      - .env.staging
+    cmd: ./deploy.sh staging
+```
+
+Missing files are silently skipped - no error.
+
+## Precedence
+
+From lowest to highest:
+
+1. Your shell's existing environment
+2. Global env files (in order)
+3. Command-specific env files (in order)
+
+## Runtime variables <Badge text="v3" variant="success" />
+
+Ahoy automatically injects two variables into every command:
+
+| Variable            | Value                             |
+| ------------------- | --------------------------------- |
+| `AHOY_COMMAND_NAME` | The name of the command being run |
+| `AHOY_CMD`          | Path to the ahoy binary           |
+
+These are useful for scripts that call other ahoy commands, or need to know their own name.
+
+## Keep secrets out of version control
+
+Add your real `.env` files to `.gitignore` and commit a `.env.example` with placeholder values:
+
+```
+# .gitignore
+.env
+.env.local
+.env.secrets
+```
+
+```bash
+# .env.example - safe to commit
+DB_USER=your_username
+DB_PASS=your_password
+DB_NAME=your_database
+```
+
+For the complete format specification and precedence details, see the [Environment Reference](/reference/environment).

@@ -1,0 +1,159 @@
+---
+title: Environment Variables Reference
+description: Complete specification for environment file format, variable precedence, and Ahoy's runtime variables
+---
+
+import { Aside, Badge } from "@astrojs/starlight/components";
+
+## Overview <Badge text="v2.3.0+" variant="tip" />
+
+Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept a single file path or an array of paths <Badge text="v2.5.0+" variant="note" size="small" />.
+
+## File path resolution
+
+All env file paths are relative to the directory containing the `.ahoy.yml` file - not your current working directory. This ensures consistent behaviour regardless of which subdirectory you run commands from.
+
+## Precedence
+
+Variables are applied in this order, from lowest to highest priority:
+
+1. **Shell environment** - variables already in your shell when you run `ahoy`
+2. **Global env files** - loaded in the order listed under the top-level `env` key
+3. **Command-specific env files** - loaded in the order listed under a command's `env` key
+
+Later sources override earlier ones. A command-specific variable always wins over a global one with the same name.
+
+<Aside type="note">
+  Missing env files are silently skipped - specifying a file that doesn't exist is not an error.
+</Aside>
+
+## Runtime variables <Badge text="v3" variant="success" />
+
+Ahoy automatically injects two variables into every command's environment, regardless of any `env` file configuration:
+
+| Variable            | Value                             |
+| ------------------- | --------------------------------- |
+| `AHOY_COMMAND_NAME` | The name of the command being run |
+| `AHOY_CMD`          | Path to the ahoy binary           |
+
+These cannot be overridden by env files.
+
+## File format specification
+
+Ahoy env files use standard shell variable format. The parser follows these rules:
+
+- One variable per line: `NAME=VALUE`
+- Lines starting with `#` are treated as comments and ignored
+- Empty lines are ignored
+- Leading and trailing whitespace on each line is trimmed
+- The `export` keyword prefix is accepted but has no effect
+- Variable references within values (e.g. `${OTHER_VAR}`) are **not** resolved by Ahoy - they are passed through as literals and may be expanded by the shell when the command runs
+
+### Examples
+
+```bash
+# Simple values
+DB_HOST=localhost
+DB_PORT=3306
+APP_NAME=myapp
+
+# Values with spaces (quotes are part of the value - the shell strips them)
+FULL_NAME="Jane Smith"
+GREETING='Hello, World!'
+
+# Comments are fully ignored
+# This line does nothing
+
+# Inline comments are also ignored
+API_KEY=abc123def456  # production key
+
+# Empty value (sets the variable to an empty string)
+OPTIONAL_VALUE=
+
+# Export prefix (accepted but no special meaning)
+export DATABASE_URL=postgres://user:pass@localhost/myapp
+
+# Multi-line values
+SSH_KEY="-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEA...
+-----END RSA PRIVATE KEY-----"
+```
+
+### What the parser does not support
+
+- Variable interpolation within the file (`API_URL=${BASE_URL}/api` is passed through literally)
+- Backslash continuation across lines
+- Shell arithmetic or command substitution
+
+If you need these, set variables in a shell script and call that script from your `cmd`.
+
+## Variable naming
+
+By convention, environment variable names use `UPPER_SNAKE_CASE`. Names can contain letters, digits, and underscores. Names starting with a digit are technically invalid in most shells.
+
+## Security
+
+Never commit real credentials to version control. A common pattern:
+
+```
+project/
+├── .env.example    # Committed - contains placeholder values only
+├── .env            # Not committed - contains real local values
+└── .gitignore      # Contains ".env" pattern
+```
+
+```bash
+# .gitignore
+.env
+.env.local
+.env.*.local
+*.secrets
+```
+
+## Organisation patterns
+
+**By environment:**
+
+```
+.env              # Shared defaults
+.env.local        # Developer overrides (not committed)
+.env.staging      # Staging-specific (may be committed)
+.env.production   # Production-specific (not committed)
+```
+
+**By purpose:**
+
+```
+.env              # Global project defaults
+.env.db           # Database credentials
+.env.deploy       # Deployment configuration
+```
+
+**Layered approach** (useful for team projects):
+
+```yaml
+env:
+  - .env.defaults # Committed defaults for the whole team
+  - .env.local # Personal overrides, gitignored
+```
+
+## Accessing variables in commands
+
+Variables are available through standard shell syntax in `bash` commands:
+
+```yaml
+commands:
+  connect:
+    env: .env.db
+    cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
+```
+
+Or with defaults using bash parameter expansion:
+
+```yaml
+commands:
+  serve:
+    cmd: python -m http.server ${PORT:-8000}
+```
+
+When using a non-bash entrypoint, access variables through the appropriate mechanism for that runtime (e.g. `process.env.VARIABLE` in Node.js, `os.environ['VARIABLE']` in Python).

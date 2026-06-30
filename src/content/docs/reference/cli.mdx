@@ -1,0 +1,118 @@
+---
+title: CLI Reference
+description: Complete reference for Ahoy command-line options and built-in commands
+---
+
+import { Badge } from "@astrojs/starlight/components";
+
+## Synopsis
+
+```
+ahoy [flags] [command] [args...]
+```
+
+## Global flags
+
+| Flag            | Short | Description                                                     |
+| --------------- | ----- | --------------------------------------------------------------- |
+| `--file <path>` | `-f`  | Use a specific config file instead of searching for `.ahoy.yml` |
+| `--verbose`     |       | Enable verbose output                                           |
+| `--version`     |       | Print the Ahoy version and exit                                 |
+| `--help`        | `-h`  | Show help                                                       |
+
+## Built-in commands
+
+### `ahoy config` <Badge text="v3" variant="success" />
+
+Management commands for your Ahoy configuration.
+
+#### `ahoy config init [url]`
+
+Downloads a starter `.ahoy.yml` into the current directory. Without a URL it fetches the official examples file (30+ ready-to-use commands). Pass a custom URL to download your own template.
+
+```bash
+ahoy config init               # Download official examples
+ahoy config init https://...   # Download a custom template
+ahoy config init --force       # Overwrite an existing .ahoy.yml
+```
+
+#### `ahoy config validate`
+
+Checks your `.ahoy.yml` (and any imported files) for common issues:
+
+- Unsupported or missing fields
+- Missing import files (not marked `optional: true`)
+- Features that require a newer version of Ahoy
+
+```bash
+ahoy config validate
+```
+
+Errors are always shown. Warnings are shown in verbose mode (`--verbose`). The validator also provides actionable suggestions when it finds a problem.
+
+### `ahoy help`
+
+```bash
+ahoy help            # Root help listing
+ahoy help <command>  # Help for a specific command
+```
+
+### Deprecated: `ahoy init`
+
+`ahoy init` still works but is deprecated. It redirects to `ahoy config init` with a notice. Prefer `ahoy config init` in any new scripts or documentation.
+
+## Config file discovery
+
+Ahoy searches for `.ahoy.yml` in the following order:
+
+1. The file specified by `--file` / `-f`
+2. `.ahoy.yml` in the current directory
+3. `.ahoy.yml` in each parent directory, up to the filesystem root
+
+The directory containing the found config file becomes the working directory for all commands.
+
+## Passing arguments to commands
+
+Arguments after the command name are passed through as bash positional parameters:
+
+```bash
+ahoy greet World       # $1 = "World"
+ahoy copy a.txt b.txt  # $1 = "a.txt", $2 = "b.txt"
+ahoy run npm test      # $@ = "npm test"
+```
+
+## Shell completion
+
+### Bash
+
+```bash
+# Generate and install the completion script
+mkdir -p ~/.bash_completion.d
+ahoy --generate-bash-completion > ~/.bash_completion.d/ahoy
+echo '. ~/.bash_completion.d/ahoy' >> ~/.bashrc
+source ~/.bashrc
+```
+
+### Zsh
+
+Use the dedicated plugin at [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-ahoy). See the [Shell Autocompletion guide](/guides/shell-autocompletion) for setup instructions.
+
+## Exit codes
+
+| Code | Meaning                                                |
+| ---- | ------------------------------------------------------ |
+| `0`  | Success                                                |
+| `1`  | General error (command failed, config not found, etc.) |
+
+Ahoy passes the exit code of the underlying command through unchanged.
+
+## Environment variables set by Ahoy <Badge text="v3" variant="success" />
+
+Ahoy injects the following variables into every command's environment:
+
+| Variable            | Value                             |
+| ------------------- | --------------------------------- |
+| `AHOY_COMMAND_NAME` | The name of the command being run |
+| `AHOY_CMD`          | Path to the ahoy binary           |
+
+These are available to any script invoked through Ahoy.
