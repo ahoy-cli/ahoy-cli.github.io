@@ -7,6 +7,8 @@ on:
     branches: ["main"]
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: "docs-${{ github.ref }}"
   cancel-in-progress: true
