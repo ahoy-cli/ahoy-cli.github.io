@@ -16,7 +16,7 @@ import { Aside } from "@astrojs/starlight/components";
   </TabItem>
   <TabItem label="Linux">
     ```bash
-    os=$(uname -s | tr '[:upper:]' '[:lower:]') && architecture=$(case $(uname -m) in x86_64 | amd64) echo "amd64" ;; aarch64 | arm64 | armv8) echo "arm64" ;; *) echo "amd64" ;; esac) && sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
+    os=$(uname -s | tr '[:upper:]' '[:lower:]') && architecture=$(case $(uname -m) in (x86_64 | amd64) echo "amd64" ;; (aarch64 | arm64 | armv8*) echo "arm64" ;; (armv7*) echo "armv7" ;; (armv6*) echo "armv6" ;; esac) && { [ -n "$architecture" ] || { echo "Unsupported architecture: $(uname -m)" >&2; false; }; } && sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
     ```
 
     Or download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases) and place the binary somewhere in your `$PATH`.
@@ -26,6 +26,22 @@ import { Aside } from "@astrojs/starlight/components";
     Use the Linux instructions above.
   </TabItem>
 </Tabs>
+
+<Aside type="note" title="Looking for Ahoy v2?">
+  Homebrew has switched to v3, so `brew install ahoy` now installs the latest v3 release. The Linux
+  command above resolves to v3 as well, since it downloads from `/releases/latest/`.
+
+  v3 is intended to be fully backwards compatible with existing v2 `.ahoy.yml` files, so most
+  projects need no changes. If you do still need v2, download it from the
+  [v2.5.0 release page](https://github.com/ahoy-cli/ahoy/releases/tag/v2.5.0) - v2.5.0 is the latest
+  v2 release, and there is no `ahoy@2` Homebrew formula.
+
+  ```bash
+  # Linux amd64. The v2 release also provides ahoy-bin-linux-arm64, ahoy-bin-linux-arm,
+  # ahoy-bin-darwin-amd64 and ahoy-bin-darwin-arm64.
+  sudo wget -q https://github.com/ahoy-cli/ahoy/releases/download/v2.5.0/ahoy-bin-linux-amd64 -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
+  ```
+</Aside>
 
 Verify it's working:
 
