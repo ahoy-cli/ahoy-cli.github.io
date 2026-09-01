@@ -38,6 +38,22 @@ ahoy run-in-container npm test
 
 `$@` passes all arguments through, which is handy for wrapper commands. Use `$#` to check the argument count, and `$0` for the command name.
 
+Everything after the command name reaches your command verbatim, flags
+included, so wrapping a tool that takes its own options needs nothing special:
+
+```yaml
+commands:
+  phpunit:
+    cmd: docker compose exec app vendor/bin/phpunit $@
+```
+
+```bash
+ahoy phpunit --filter=MyTest --stop-on-failure
+```
+
+Ahoy's own flags — `--verbose`, `--file` and friends — are only recognised
+before the command name, so they never collide with your command's options.
+
 ## Interactive commands
 
 Ahoy's stdin is connected directly to your terminal, so interactive commands work without any special setup:
@@ -120,3 +136,28 @@ Ahoy passes exit codes through unchanged. If a command exits non-zero, Ahoy exit
 ```bash
 ahoy test && ahoy deploy
 ```
+
+## Controlling execution within a command
+
+Because the command body is bash, the usual operators control what runs next:
+
+- `&&` - run the next command only if the previous one succeeded (exit `0`)
+- `||` - run the next command only if the previous one failed (non-zero exit)
+- `;` - always run the next command
+
+```yaml
+commands:
+  only-run-1-2-and-4:
+    cmd: |
+      echo "1 - If this passes" &&
+      echo "2 - Then do this" ||
+      echo "3 - Or do this if 1 or 2 fails" ;
+      echo "4 - Do this no matter what"
+```
+
+## Debugging and gotchas
+
+- **Use `--verbose` to see what actually ran.** It prints the resolved command before executing it, which is the fastest way to diagnose an unexpected result.
+- **Commands run in a subshell.** Environment variables are copied in, but nothing a command does can change your parent shell - it cannot change your current directory or set variables for your session.
+- **Quotes can be tricky.** When passing a command through to a subcommand, quotes can be lost along the way. Check `--verbose` first, then experiment with single versus double quotes. Prefer `cmd: |` for anything complex so YAML quoting stays out of the way.
+- **Check your YAML if Ahoy complains.** Indentation and structure errors surface as parse failures; `ahoy config validate` reports them along with unsupported fields.
