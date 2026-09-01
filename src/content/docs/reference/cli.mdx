@@ -14,7 +14,7 @@ ahoy [flags] [command] [args...]
 ## Global flags
 
 Global flags belong **before** the command name. Everything after the command
-name belongs to that command — see
+name belongs to that command - see
 [Passing arguments to commands](#passing-arguments-to-commands).
 
 | Flag            | Short | Description                                                     |
@@ -133,7 +133,7 @@ ahoy run npm test      # $@ = "npm test"
 
 Everything after the command name is passed through **verbatim and in order**,
 including anything that looks like a flag. Ahoy never claims a flag there, even
-one of its own — which is what makes Ahoy usable as a wrapper around other
+one of its own - which is what makes Ahoy usable as a wrapper around other
 tools:
 
 ```bash
@@ -150,6 +150,33 @@ before the arguments are passed on, matching v2:
 ```bash
 ahoy run -- npm test   # $@ = "npm test"
 ```
+
+### Where each token goes
+
+| Typed                              | Read by | Reaches the command as   |
+| ---------------------------------- | ------- | ------------------------ |
+| `ahoy --verbose test`              | Ahoy    | -                        |
+| `ahoy -f build.yml test`           | Ahoy    | -                        |
+| `ahoy -f=build.yml test`           | Ahoy    | -                        |
+| `ahoy test --verbose`              | Command | `--verbose`              |
+| `ahoy test --filter=X`             | Command | `--filter=X`             |
+| `ahoy test -R -p /tmp/logs`        | Command | `-R -p /tmp/logs`        |
+| `ahoy test --help`                 | Command | `--help`                 |
+| `ahoy test -- --anything`          | Command | `--anything`             |
+| `ahoy help test`                   | Ahoy    | -                        |
+
+## Standard streams
+
+Ahoy connects stdin, stdout and stderr straight through to the terminal it was
+started from. It does not read, buffer, tee or copy them, so:
+
+- Interactive commands get a real prompt and readline support
+- Full-screen and TUI commands (`gum`, `fzf`, anything on Bubble Tea) can query
+  the terminal size and draw correctly
+- Output appears as it is produced rather than when the command exits
+- Redirection behaves as it would without Ahoy: `ahoy test 2>errors.log`
+
+Exit codes pass through unchanged - see [Exit codes](#exit-codes).
 
 ## Shell completion
 

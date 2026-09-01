@@ -3,6 +3,8 @@ title: Command Execution
 description: How Ahoy finds and runs your commands
 ---
 
+import { Aside } from "@astrojs/starlight/components";
+
 ## How Ahoy finds your config
 
 When you run an Ahoy command, it:
@@ -51,12 +53,14 @@ commands:
 ahoy phpunit --filter=MyTest --stop-on-failure
 ```
 
-Ahoy's own flags — `--verbose`, `--file` and friends — are only recognised
+Ahoy's own flags - `--verbose`, `--file` and friends - are only recognised
 before the command name, so they never collide with your command's options.
 
 ## Interactive commands
 
-Ahoy's stdin is connected directly to your terminal, so interactive commands work without any special setup:
+All three standard streams - stdin, stdout and stderr - are connected straight
+through to your terminal. Ahoy does not read, buffer or copy them, so a command
+runs exactly as it would if you had typed it yourself:
 
 ```yaml
 commands:
@@ -70,6 +74,39 @@ commands:
 ```
 
 These run fully interactively - you get a real prompt, readline support, and piping all work as expected.
+
+### Full-screen and TUI commands
+
+Because the streams are the real terminal rather than a copy of it, commands
+can ask the terminal about itself - its size, whether it is a TTY at all - and
+get a true answer. That is what full-screen and menu-driven tools need in order
+to draw:
+
+```yaml
+commands:
+  pick-env:
+    usage: Choose an environment to deploy to
+    cmd: gum choose staging production
+
+  logs:
+    usage: Browse container logs interactively
+    cmd: docker compose logs --tail=1000 | fzf --tac
+```
+
+Tools built on [Bubble Tea](https://github.com/charmbracelet/bubbletea) - `gum`,
+`glow` and similar - draw on stderr specifically, as do progress bars, spinners
+and anything that repaints in place.
+
+<Aside type="caution" title="Fixed in v3.0.1">
+  Ahoy v3.0.0 routed stderr through an internal pipe. Bytes still reached your
+  terminal, but the terminal itself was no longer on the other end, so these
+  tools measured a 0x0 screen and drew nothing - or, with `gum` on Bubble Tea
+  v2, crashed outright. If you are on v3.0.0 and an interactive command renders
+  blank, upgrade. See [issue #180](https://github.com/ahoy-cli/ahoy/issues/180).
+</Aside>
+
+Output is not buffered either - a long-running command's output appears as it
+is produced, not in a burst when the command exits.
 
 ## Chaining commands
 
