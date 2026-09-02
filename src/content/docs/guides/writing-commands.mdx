@@ -38,13 +38,31 @@ commands:
 
   run:
     usage: Run any command in the app container
-    cmd: docker compose exec app $@
+    cmd: docker compose exec app "$@"
 ```
 
 `$1`, `$2` for specific positions; `$@` to forward everything. The last pattern is great for transparent wrappers:
 
 ```bash
 ahoy run npm test -- --watch
+```
+
+Flags count as arguments. Everything after the command name reaches your
+command exactly as typed, in order, and Ahoy never claims any of it:
+
+```bash
+ahoy run npm test --watch
+ahoy run chown -R www-data:www-data .
+```
+
+Ahoy consumes a `--` only when it is the first thing after the command name,
+where it has always just meant "the rest is arguments". A `--` anywhere else
+belongs to your command, so wrapping a tool that needs its own separator works
+as you would expect:
+
+```bash
+ahoy k exec mypod -- ls /app       # kubectl gets its separator
+ahoy run npm test -- --watch       # npm passes --watch to the test script
 ```
 
 ## Multi-line scripts
@@ -179,6 +197,28 @@ commands:
 ```
 
 Then your team just runs `ahoy drush cache:rebuild` or `ahoy composer require vendor/package`.
+
+The wrapped tool keeps its own flags, including the ones that would otherwise
+be Ahoy's:
+
+```bash
+ahoy drush --help                     # Drush's help
+ahoy composer require --dev vendor/pkg
+ahoy drush sql:query --extra=-A "SELECT 1"
+ahoy node --version
+```
+
+The one thing to know: since `--help` belongs to the wrapped tool, Ahoy's own
+help for a command is `ahoy help drush`.
+
+<Aside type="caution" title="Fixed in v3.0.1">
+  Ahoy v3.0.0 parsed a command's arguments before running it and silently
+  dropped any flag it did not recognise, along with the token following it -
+  so `ahoy fix-perms chown -R www-data:www-data .` arrived as `chown .`. The
+  wrapped tool ran successfully with different arguments, which made this
+  quiet rather than loud. Upgrade if you wrap anything that takes flags. See
+  [issue #182](https://github.com/ahoy-cli/ahoy/issues/182).
+</Aside>
 
 ## Environment-specific commands <Badge text="v2.3.0+" variant="tip" />
 

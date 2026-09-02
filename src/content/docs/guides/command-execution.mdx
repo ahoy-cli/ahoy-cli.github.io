@@ -3,6 +3,8 @@ title: Command Execution
 description: How Ahoy finds and runs your commands
 ---
 
+import { Aside } from "@astrojs/starlight/components";
+
 ## How Ahoy finds your config
 
 When you run an Ahoy command, it:
@@ -27,7 +29,7 @@ commands:
     cmd: cp $1 $2
 
   run-in-container:
-    cmd: docker-compose exec app $@
+    cmd: docker-compose exec app "$@"
 ```
 
 ```bash
@@ -38,9 +40,27 @@ ahoy run-in-container npm test
 
 `$@` passes all arguments through, which is handy for wrapper commands. Use `$#` to check the argument count, and `$0` for the command name.
 
+Everything after the command name reaches your command verbatim, flags
+included, so wrapping a tool that takes its own options needs nothing special:
+
+```yaml
+commands:
+  phpunit:
+    cmd: docker compose exec app vendor/bin/phpunit "$@"
+```
+
+```bash
+ahoy phpunit --filter=MyTest --stop-on-failure
+```
+
+Ahoy's own flags - `--verbose`, `--file` and friends - are only recognised
+before the command name, so they never collide with your command's options.
+
 ## Interactive commands
 
-Ahoy's stdin is connected directly to your terminal, so interactive commands work without any special setup:
+All three standard streams - stdin, stdout and stderr - are inherited from the
+process that invoked Ahoy. Ahoy does not read, buffer or copy them, so a command
+runs exactly as it would if you had typed it yourself:
 
 ```yaml
 commands:
@@ -53,7 +73,44 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
 
-These run fully interactively - you get a real prompt, readline support, and piping all work as expected.
+When you run these from a terminal, the inherited streams are attached to a
+TTY, so they run fully interactively - you get a real prompt, readline support,
+and piping all work as expected. Invoked from a script or CI job, where the
+streams are pipes or files instead, the command sees exactly what it would see
+there without Ahoy.
+
+### Full-screen and TUI commands
+
+Because the streams are the inherited descriptors rather than a copy of them,
+commands can ask about them directly - whether they are a TTY at all, and if so
+the terminal size - and get a true answer. When Ahoy is run from a terminal that
+is what full-screen and menu-driven tools need in order to draw:
+
+```yaml
+commands:
+  pick-env:
+    usage: Choose an environment to deploy to
+    cmd: gum choose staging production
+
+  logs:
+    usage: Browse container logs interactively
+    cmd: docker compose logs --tail=1000 | fzf --tac
+```
+
+Tools built on [Bubble Tea](https://github.com/charmbracelet/bubbletea) - `gum`,
+`glow` and similar - draw on stderr specifically, as do progress bars, spinners
+and anything that repaints in place.
+
+<Aside type="caution" title="Fixed in v3.0.1">
+  Ahoy v3.0.0 routed stderr through an internal pipe. Bytes still reached your
+  terminal, but the terminal itself was no longer on the other end, so these
+  tools measured a 0x0 screen and drew nothing - or, with `gum` on Bubble Tea
+  v2, crashed outright. If you are on v3.0.0 and an interactive command renders
+  blank, upgrade. See [issue #180](https://github.com/ahoy-cli/ahoy/issues/180).
+</Aside>
+
+Output is not buffered either - a long-running command's output appears as it
+is produced, not in a burst when the command exits.
 
 ## Chaining commands
 
@@ -120,3 +177,28 @@ Ahoy passes exit codes through unchanged. If a command exits non-zero, Ahoy exit
 ```bash
 ahoy test && ahoy deploy
 ```
+
+## Controlling execution within a command
+
+Because the command body is bash, the usual operators control what runs next:
+
+- `&&` - run the next command only if the previous one succeeded (exit `0`)
+- `||` - run the next command only if the previous one failed (non-zero exit)
+- `;` - always run the next command
+
+```yaml
+commands:
+  only-run-1-2-and-4:
+    cmd: |
+      echo "1 - If this passes" &&
+      echo "2 - Then do this" ||
+      echo "3 - Or do this if 1 or 2 fails" ;
+      echo "4 - Do this no matter what"
+```
+
+## Debugging and gotchas
+
+- **Use `--verbose` to see what actually ran.** It prints the resolved command before executing it, which is the fastest way to diagnose an unexpected result.
+- **Commands run in a subshell.** Environment variables are copied in, but nothing a command does can change your parent shell - it cannot change your current directory or set variables for your session.
+- **Quotes can be tricky.** When passing a command through to a subcommand, quotes can be lost along the way. Check `--verbose` first, then experiment with single versus double quotes. Prefer `cmd: |` for anything complex so YAML quoting stays out of the way.
+- **Check your YAML if Ahoy complains.** Indentation and structure errors surface as parse failures; `ahoy config validate` reports them along with unsupported fields.

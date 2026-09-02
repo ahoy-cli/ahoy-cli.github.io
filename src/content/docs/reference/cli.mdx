@@ -13,12 +13,21 @@ ahoy [flags] [command] [args...]
 
 ## Global flags
 
+Global flags belong **before** the command name. Everything after the command
+name belongs to that command - see
+[Passing arguments to commands](#passing-arguments-to-commands).
+
 | Flag            | Short | Description                                                     |
 | --------------- | ----- | --------------------------------------------------------------- |
 | `--file <path>` | `-f`  | Use a specific config file instead of searching for `.ahoy.yml` |
-| `--verbose`     |       | Enable verbose output                                           |
+| `--verbose`     | `-v`  | Enable verbose output                                           |
 | `--version`     |       | Print the Ahoy version and exit                                 |
 | `--help`        | `-h`  | Show help                                                       |
+
+```bash
+ahoy --verbose deploy     # --verbose is Ahoy's
+ahoy deploy --verbose     # --verbose is passed to the deploy command
+```
 
 ## Built-in commands
 
@@ -61,6 +70,47 @@ ahoy help <command>  # Help for a specific command
 
 `ahoy init` still works but is deprecated. It redirects to `ahoy config init` with a notice. Prefer `ahoy config init` in any new scripts or documentation.
 
+## Conventional commands
+
+### `ahoy confirm <message>`
+
+`confirm` is not built in - it is a convention: a small command you define in your own config (and can import from [confirmation.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/confirmation.ahoy.yml)) to guard destructive operations. Because Ahoy commands can call other Ahoy commands, it behaves like a reusable function.
+
+It prompts with your message and exits `0` when the answer is `y`, or `1` otherwise, so it chains with `&&`, `||` and `|| exit 0`:
+
+```bash
+ahoy confirm "Are you sure you want to do this?"
+# >> Are you sure you want to do this? [y/N]
+
+ahoy confirm "Delete the build directory?" && rm -rf ./build || echo "Skipping..."
+```
+
+A minimal definition:
+
+```yaml
+commands:
+  confirm:
+    hide: true
+    cmd: |
+      read -r -p ">> $1 [y/N] " response
+      [ "$response" = "y" ]
+```
+
+`hide: true` keeps the helper out of the command listing without disabling it.
+
+The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml) carries a fuller version that also works unattended, controlled by two environment variables you set yourself:
+
+| Variable                | Effect                                                            |
+| ----------------------- | ----------------------------------------------------------------- |
+| `AHOY_CONFIRM_RESPONSE` | Answers the prompt instead of reading from the terminal (e.g. `y`) |
+| `AHOY_CONFIRM_WAIT_SKIP` | Set to `1` to skip the 3-second grace pause in automated mode     |
+
+```bash
+AHOY_CONFIRM_RESPONSE=y AHOY_CONFIRM_WAIT_SKIP=1 ahoy db:reset
+```
+
+See [Writing Commands](/guides/writing-commands) for the full pattern.
+
 ## Config file discovery
 
 Ahoy searches for `.ahoy.yml` in the following order:
@@ -80,6 +130,61 @@ ahoy greet World       # $1 = "World"
 ahoy copy a.txt b.txt  # $1 = "a.txt", $2 = "b.txt"
 ahoy run npm test      # $@ = "npm test"
 ```
+
+Everything after the command name is passed through **verbatim and in order**,
+including anything that looks like a flag. Ahoy never claims a flag there, even
+one of its own - which is what makes Ahoy usable as a wrapper around other
+tools:
+
+```bash
+ahoy test --filter=MyTest --stop-on-failure   # all four tokens reach the command
+ahoy fix-perms chown -R www-data:www-data .   # -R is not Ahoy's to take
+ahoy phpunit --help                           # PHPUnit's help, not Ahoy's
+```
+
+To reach Ahoy's own help for a command, use `ahoy help <command>`.
+
+A leading `--` is accepted for readability and removed before the arguments are
+passed on. Any later `--` is the command's own data and reaches it untouched,
+which matters for the many tools that need a separator of their own:
+
+```bash
+ahoy run -- npm test               # $@ = "npm test"
+ahoy k exec mypod -- ls /app       # $@ = "exec mypod -- ls /app"
+ahoy git checkout -- src/main.go   # $@ = "checkout -- src/main.go"
+```
+
+### Where each token goes
+
+| Typed                              | Read by | Reaches the command as   |
+| ---------------------------------- | ------- | ------------------------ |
+| `ahoy --verbose test`              | Ahoy    | -                        |
+| `ahoy -f build.yml test`           | Ahoy    | -                        |
+| `ahoy -f=build.yml test`           | Ahoy    | -                        |
+| `ahoy test --verbose`              | Command | `--verbose`              |
+| `ahoy test --filter=X`             | Command | `--filter=X`             |
+| `ahoy test -R -p /tmp/logs`        | Command | `-R -p /tmp/logs`        |
+| `ahoy test --help`                 | Command | `--help`                 |
+| `ahoy test -- --anything`          | Command | `--anything`             |
+| `ahoy test a -- b`                 | Command | `a -- b`                 |
+| `ahoy help test`                   | Ahoy    | -                        |
+
+## Standard streams
+
+Ahoy passes stdin, stdout and stderr through unchanged - each command inherits
+the streams of the process that invoked Ahoy, whether those are a terminal,
+pipes, or files. It does not read, buffer, tee or copy them, so:
+
+- Interactive commands get a real prompt and readline support when stdin is
+  attached to a TTY
+- Full-screen and TUI commands (`gum`, `fzf`, anything on Bubble Tea) can query
+  the terminal size and draw correctly when the relevant streams are a TTY
+- Output appears as it is produced rather than when the command exits
+- Redirection behaves as it would without Ahoy - `ahoy test 2>errors.log`
+  sends the command's stderr to the file, unbuffered, while stdout stays on
+  the terminal
+
+Exit codes pass through unchanged - see [Exit codes](#exit-codes).
 
 ## Shell completion
 
