@@ -9,6 +9,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "check": "astro check",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "oxfmt --write .",
@@ -20,7 +21,9 @@
     "sharp": "^0.35.3"
   },
   "devDependencies": {
-    "oxfmt": "^0.64.0",
-    "oxlint": "^1.78.0"
+    "@astrojs/check": "^0.9.10",
+    "oxfmt": "^0.65",
+    "oxlint": "^1.78.0",
+    "typescript": "^6"
   }
 }
