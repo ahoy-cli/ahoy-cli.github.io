@@ -67,15 +67,16 @@ commands:
     cmd: ./deploy.sh staging
 ```
 
-A file like `.env.local` is often absent on some machines. From v3.0.1 Ahoy
-reports that rather than passing over it in silence, so mark such entries
-optional - see below.
+A file like `.env.local` is often absent, for example when you start a project
+from a checked-out repo with an `.ahoy.yml` file in it. From v3.0.1 Ahoy
+reports this, rather than passing over it in silence, so pleaser start to mark such entries
+as optional - see below.
 
 ## Files that may be absent <Badge text="v3.0.1+" variant="success" />
 
 A missing env file never stops a command - it is skipped, the variables it
 would have set stay empty, and the command runs. What changed in v3.0.1 is
-that Ahoy now says so:
+that Ahoy now shows a warning:
 
 ```
 [warn] environment file '.env.local' not found, continuing without it. Add 'optional: true' to that entry if it is meant to be absent.
@@ -94,8 +95,8 @@ env:
 ```
 
 This is the same `optional` you may already use on
-[imports](/guides/importing/): the file is expected not to
-always be there.
+[imports](/guides/importing/): simply meaning that the file is not expected to
+always present.
 
 The warning goes to stderr, so it never contaminates a command's stdout when
 you pipe it. `ahoy config validate` distinguishes the two as well, listing a
