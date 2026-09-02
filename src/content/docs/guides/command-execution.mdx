@@ -29,7 +29,7 @@ commands:
     cmd: cp $1 $2
 
   run-in-container:
-    cmd: docker-compose exec app $@
+    cmd: docker-compose exec app "$@"
 ```
 
 ```bash
@@ -46,7 +46,7 @@ included, so wrapping a tool that takes its own options needs nothing special:
 ```yaml
 commands:
   phpunit:
-    cmd: docker compose exec app vendor/bin/phpunit $@
+    cmd: docker compose exec app vendor/bin/phpunit "$@"
 ```
 
 ```bash
@@ -58,8 +58,8 @@ before the command name, so they never collide with your command's options.
 
 ## Interactive commands
 
-All three standard streams - stdin, stdout and stderr - are connected straight
-through to your terminal. Ahoy does not read, buffer or copy them, so a command
+All three standard streams - stdin, stdout and stderr - are inherited from the
+process that invoked Ahoy. Ahoy does not read, buffer or copy them, so a command
 runs exactly as it would if you had typed it yourself:
 
 ```yaml
@@ -73,14 +73,18 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
 
-These run fully interactively - you get a real prompt, readline support, and piping all work as expected.
+When you run these from a terminal, the inherited streams are attached to a
+TTY, so they run fully interactively - you get a real prompt, readline support,
+and piping all work as expected. Invoked from a script or CI job, where the
+streams are pipes or files instead, the command sees exactly what it would see
+there without Ahoy.
 
 ### Full-screen and TUI commands
 
-Because the streams are the real terminal rather than a copy of it, commands
-can ask the terminal about itself - its size, whether it is a TTY at all - and
-get a true answer. That is what full-screen and menu-driven tools need in order
-to draw:
+Because the streams are the inherited descriptors rather than a copy of them,
+commands can ask about them directly - whether they are a TTY at all, and if so
+the terminal size - and get a true answer. When Ahoy is run from a terminal that
+is what full-screen and menu-driven tools need in order to draw:
 
 ```yaml
 commands:

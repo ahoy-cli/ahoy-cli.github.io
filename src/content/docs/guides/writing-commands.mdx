@@ -38,7 +38,7 @@ commands:
 
   run:
     usage: Run any command in the app container
-    cmd: docker compose exec app $@
+    cmd: docker compose exec app "$@"
 ```
 
 `$1`, `$2` for specific positions; `$@` to forward everything. The last pattern is great for transparent wrappers:

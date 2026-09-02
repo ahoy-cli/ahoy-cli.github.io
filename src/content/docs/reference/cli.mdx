@@ -171,14 +171,18 @@ ahoy git checkout -- src/main.go   # $@ = "checkout -- src/main.go"
 
 ## Standard streams
 
-Ahoy connects stdin, stdout and stderr straight through to the terminal it was
-started from. It does not read, buffer, tee or copy them, so:
+Ahoy passes stdin, stdout and stderr through unchanged - each command inherits
+the streams of the process that invoked Ahoy, whether those are a terminal,
+pipes, or files. It does not read, buffer, tee or copy them, so:
 
-- Interactive commands get a real prompt and readline support
+- Interactive commands get a real prompt and readline support when stdin is
+  attached to a TTY
 - Full-screen and TUI commands (`gum`, `fzf`, anything on Bubble Tea) can query
-  the terminal size and draw correctly
+  the terminal size and draw correctly when the relevant streams are a TTY
 - Output appears as it is produced rather than when the command exits
-- Redirection behaves as it would without Ahoy: `ahoy test 2>errors.log`
+- Redirection behaves as it would without Ahoy - `ahoy test 2>errors.log`
+  sends the command's stderr to the file, unbuffered, while stdout stays on
+  the terminal
 
 Exit codes pass through unchanged - see [Exit codes](#exit-codes).
 
