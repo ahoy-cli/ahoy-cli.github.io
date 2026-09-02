@@ -67,7 +67,46 @@ commands:
     cmd: ./deploy.sh staging
 ```
 
-Missing files are silently skipped - no error.
+A file like `.env.local` is often absent on some machines. From v3.0.1 Ahoy
+reports that rather than passing over it in silence, so mark such entries
+optional - see below.
+
+## Files that may be absent <Badge text="v3.0.1+" variant="success" />
+
+A missing env file never stops a command - it is skipped, the variables it
+would have set stay empty, and the command runs. What changed in v3.0.1 is
+that Ahoy now says so:
+
+```
+[warn] environment file '.env.local' not found, continuing without it. Add 'optional: true' to that entry if it is meant to be absent.
+```
+
+Every entry is required by default, so a typo in a filename surfaces instead of
+leaving you to work out why a variable is empty. For the files that are meant
+to be missing - a personal `.env.local` that only some developers have - write
+the entry as a mapping and mark it `optional: true`:
+
+```yaml
+env:
+  - .env.base # Required: warns when absent
+  - path: .env.local
+    optional: true # Silent when absent
+```
+
+This is the same `optional` you may already use on
+[imports](/guides/importing/): the file is expected not to
+always be there.
+
+The warning goes to stderr, so it never contaminates a command's stdout when
+you pipe it. `ahoy config validate` distinguishes the two as well, listing a
+missing required file with `❌` and a missing optional one with `➖ ... -
+missing, marked optional`.
+
+<Aside type="caution" title="Requires v3.0.1">
+  The mapping form is not understood by earlier versions - Ahoy v2.5.0 fails to
+  parse it with `cannot unmarshal !!seq into string`. Keep the plain string form
+  if your `.ahoy.yml` is shared with anyone still on v2 or v3.0.0.
+</Aside>
 
 ## Precedence
 
