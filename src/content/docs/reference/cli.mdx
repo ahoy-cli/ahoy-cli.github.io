@@ -144,11 +144,14 @@ ahoy phpunit --help                           # PHPUnit's help, not Ahoy's
 
 To reach Ahoy's own help for a command, use `ahoy help <command>`.
 
-A `--` separator is still accepted anywhere for readability and is removed
-before the arguments are passed on, matching v2:
+A leading `--` is accepted for readability and removed before the arguments are
+passed on. Any later `--` is the command's own data and reaches it untouched,
+which matters for the many tools that need a separator of their own:
 
 ```bash
-ahoy run -- npm test   # $@ = "npm test"
+ahoy run -- npm test               # $@ = "npm test"
+ahoy k exec mypod -- ls /app       # $@ = "exec mypod -- ls /app"
+ahoy git checkout -- src/main.go   # $@ = "checkout -- src/main.go"
 ```
 
 ### Where each token goes
@@ -163,6 +166,7 @@ ahoy run -- npm test   # $@ = "npm test"
 | `ahoy test -R -p /tmp/logs`        | Command | `-R -p /tmp/logs`        |
 | `ahoy test --help`                 | Command | `--help`                 |
 | `ahoy test -- --anything`          | Command | `--anything`             |
+| `ahoy test a -- b`                 | Command | `a -- b`                 |
 | `ahoy help test`                   | Ahoy    | -                        |
 
 ## Standard streams

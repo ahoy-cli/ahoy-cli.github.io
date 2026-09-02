@@ -48,12 +48,21 @@ ahoy run npm test -- --watch
 ```
 
 Flags count as arguments. Everything after the command name reaches your
-command exactly as typed, in order, and Ahoy never claims any of it - so the
-`--` above is optional, and there for readability only:
+command exactly as typed, in order, and Ahoy never claims any of it:
 
 ```bash
-ahoy run npm test --watch          # identical to the line above
+ahoy run npm test --watch
 ahoy run chown -R www-data:www-data .
+```
+
+Ahoy consumes a `--` only when it is the first thing after the command name,
+where it has always just meant "the rest is arguments". A `--` anywhere else
+belongs to your command, so wrapping a tool that needs its own separator works
+as you would expect:
+
+```bash
+ahoy k exec mypod -- ls /app       # kubectl gets its separator
+ahoy run npm test -- --watch       # npm passes --watch to the test script
 ```
 
 ## Multi-line scripts
