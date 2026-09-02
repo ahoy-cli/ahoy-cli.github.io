@@ -7,7 +7,11 @@ import { Aside, Badge } from "@astrojs/starlight/components";
 
 ## Overview <Badge text="v2.3.0+" variant="tip" />
 
-Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept a single file path or an array of paths <Badge text="v2.5.0+" variant="note" size="small" />.
+Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept the same three forms:
+
+- A single file path: `env: .env`
+- An array of file paths <Badge text="v2.5.0+" variant="note" size="small" />
+- An array mixing file paths with `{ path, optional }` mapping entries <Badge text="v3.0.1+" variant="success" size="small" />, which mark the files that are allowed to be absent - see [Optional env files](#optional-env-files-)
 
 ## File path resolution
 
