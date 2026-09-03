@@ -3,7 +3,7 @@ title: YAML Schema
 description: Complete technical reference for the Ahoy YAML configuration schema
 ---
 
-import { Badge } from "@astrojs/starlight/components";
+import { Aside, Badge } from "@astrojs/starlight/components";
 
 # YAML Schema Reference
 
@@ -78,7 +78,7 @@ usage: "Collection of commands for the project"
 ### `env` <Badge text="v2.3.0+" variant="tip" />
 
 **Required**: No  
-**Type**: String or Array of Strings  
+**Type**: String, Array of Strings, or Array of Strings and Mappings  
 **Default**: None  
 **Implementation**: Processed in `getCommands()` function  
 **Description**: Path(s) to global environment file(s), relative to the YAML file location. Environment variables defined here are available to all commands in this configuration file. Supports both single file and multiple files syntax.
@@ -100,13 +100,28 @@ env:
   - .env.override
 ```
 
+**Optional Environment Files** <Badge text="v3.0.1+" variant="success" size="small" />:
+
+An entry written as a mapping takes a `path` and an `optional` flag. Entries are required by
+default; a required file that is absent is reported on stderr, while an optional one is passed over
+without comment. Both forms may be mixed in the same list.
+
+```yaml
+env:
+  - .env.base # Required: warns when absent
+  - path: .env.local
+    optional: true # Silent when absent
+```
+
 **Technical Details**:
 
 - Environment variables are loaded at runtime and passed to command processes
 - When using multiple files, they are loaded in order with later files overriding earlier ones
 - Blank lines and lines starting with '#' are ignored
 - Variables from global files can be overridden by command-specific environment files
-- Non-existent files are gracefully ignored
+- A non-existent file is skipped and the command still runs; from v3.0.1 it is reported on stderr
+  unless that entry is marked `optional: true`. This is set per env entry, and is a different thing
+  from the command-level [`optional`](#optional-) flag, which covers imports only
 - Maintains full backwards compatibility with single file syntax
 
 ### `entrypoint`
@@ -267,7 +282,7 @@ commands:
 ### `env` <Badge text="v2.3.0+" variant="tip" />
 
 **Required**: No  
-**Type**: String or Array of Strings  
+**Type**: String, Array of Strings, or Array of Strings and Mappings  
 **Default**: None  
 **Implementation**: Processed in command action  
 **Description**: Path(s) to command-specific environment file(s), relative to the YAML file location. Variables defined here override any with the same name in the global env files. Supports both single file and multiple files syntax.
@@ -295,11 +310,26 @@ commands:
     cmd: ./deploy.sh
 ```
 
+**Optional Environment Files** <Badge text="v3.0.1+" variant="success" size="small" />:
+
+```yaml
+commands:
+  deploy:
+    usage: Deploy application
+    env:
+      - .env.deploy # Required: warns when absent
+      - path: .env.secrets
+        optional: true # Silent when absent
+    cmd: ./deploy.sh
+```
+
 **Technical Details**:
 
 - When using multiple files, they are loaded in order with later files overriding earlier ones
 - Command-specific environment files always override global environment files
-- Non-existent files are gracefully ignored
+- A non-existent file is skipped and the command still runs; from v3.0.1 it is reported on stderr
+  unless that entry is marked `optional: true`. This is set per env entry, and is a different thing
+  from the command-level [`optional`](#optional-) flag, which covers imports only
 - Maintains full backwards compatibility with single file syntax
 
 ### `hide`
@@ -324,7 +354,7 @@ commands:
 **Type**: Boolean  
 **Default**: `false`  
 **Implementation**: Checked in `getCommands()` function  
-**Description**: When set to `true`, prevents errors when imported files are not found. Used primarily for optional command groups.
+**Description**: When set to `true`, prevents errors when a command's imported files are not found. Used primarily for optional command groups. It applies to `imports` and nothing else.
 
 ```yaml
 commands:
@@ -334,6 +364,24 @@ commands:
     imports:
       - ./commands/optional.ahoy.yml
 ```
+
+<Aside type="caution" title="Not the same as an optional env file">
+  `commands.<name>.optional` does **not** silence a missing env file. A command carrying
+  `optional: true` still warns about every env file it cannot find. Env-file optionality is
+  configured per entry, inside the `env` mapping itself:
+
+```yaml
+commands:
+  deploy:
+    optional: true # Only tolerates missing imports
+    env:
+      - path: .env.deploy
+        optional: true # This is what silences a missing env file
+    cmd: ./deploy.sh
+```
+
+  See [`env`](#env-) <Badge text="v3.0.1+" variant="success" size="small" /> for the mapping form.
+</Aside>
 
 ## Complete Schema Example
 

@@ -7,7 +7,11 @@ import { Aside, Badge } from "@astrojs/starlight/components";
 
 ## Overview <Badge text="v2.3.0+" variant="tip" />
 
-Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept a single file path or an array of paths <Badge text="v2.5.0+" variant="note" size="small" />.
+Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept the same three forms:
+
+- A single file path: `env: .env`
+- An array of file paths <Badge text="v2.5.0+" variant="note" size="small" />
+- An array mixing file paths with `{ path, optional }` mapping entries <Badge text="v3.0.1+" variant="success" size="small" />, which mark the files that are allowed to be absent - see [Optional env files](#optional-env-files-)
 
 ## File path resolution
 
@@ -24,7 +28,56 @@ Variables are applied in this order, from lowest to highest priority:
 Later sources override earlier ones. A command-specific variable always wins over a global one with the same name.
 
 <Aside type="note">
-  Missing env files are silently skipped - specifying a file that doesn't exist is not an error.
+  A missing env file is skipped and the command still runs - specifying a file that doesn't exist is
+  not an error. From <Badge text="v3.0.1+" variant="success" size="small" /> Ahoy reports the missing
+  file on stderr unless its entry is marked `optional: true`; see [Optional env
+  files](#optional-env-files-) below.
+</Aside>
+
+## Optional env files <Badge text="v3.0.1+" variant="success" />
+
+Each entry under an `env` key is **required by default**. When a required file is absent, Ahoy
+writes a warning to stderr and carries on:
+
+```
+[warn] environment file '.env.local' not found, continuing without it. Add 'optional: true' to that entry if it is meant to be absent.
+```
+
+The command still runs, and the exit code is unchanged; only the reporting is new. Because the
+warning goes to stderr, a command's stdout stays clean for piping.
+
+To declare a file that is expected to be missing, write the entry as a mapping with `path` and
+`optional`:
+
+```yaml
+env:
+  - .env.base # Required
+  - path: .env.local
+    optional: true # Absent without comment
+  - path: .env.deploy
+    optional: false # Same as the plain string form
+```
+
+`optional` means the same thing here as it does for
+[`imports`](/reference/yaml-schema/): the entry may legitimately not resolve to a file. It is set on
+the env entry itself, though - the command-level `optional` flag covers imports only, and does not
+silence a missing env file.
+
+The two forms mix freely within one list, and both work at the global and per-command level. Every
+pre-v3.0.1 form parses unchanged: the `env: .env` shorthand, plain lists, empty lists and nulls.
+
+`ahoy config validate` reflects the distinction:
+
+```
+🌍 Environment Files:
+   ✅ .env.base (global)
+   ➖ .env.local (global) - missing, marked optional
+   ❌ .env.missing (global) - missing
+```
+
+<Aside type="caution" title="Not backwards compatible">
+  Only Ahoy v3.0.1 and later can parse the mapping form. v2.5.0 fails with `cannot unmarshal !!seq
+  into string`, so keep to plain strings in a config shared with older installs.
 </Aside>
 
 ## Runtime variables <Badge text="v3" variant="success" />
