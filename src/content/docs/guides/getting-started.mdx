@@ -75,6 +75,41 @@ complaining about the thirty or so you did not. On macOS, use
   be verified.
 </Aside>
 
+### Checking the signature
+
+Checksums prove a file arrived intact, but not who produced it: anyone able to
+replace a binary could replace the checksums file alongside it. Releases are
+therefore signed with [cosign](https://docs.sigstore.dev/), and the signature
+covers the checksums file, which in turn covers every other artifact.
+
+Signing is keyless, so there is no public key to fetch. The signature records
+the GitHub Actions workflow that built the release, and you assert which
+identity you expect:
+
+```bash
+VERSION=3.0.2
+BASE=https://github.com/ahoy-cli/ahoy/releases/download/v$VERSION
+
+curl -fsSLO $BASE/ahoy_${VERSION}_checksums.txt
+curl -fsSLO $BASE/ahoy_${VERSION}_checksums.txt.bundle
+
+cosign verify-blob ahoy_${VERSION}_checksums.txt \
+  --bundle ahoy_${VERSION}_checksums.txt.bundle \
+  --certificate-identity-regexp '^https://github.com/ahoy-cli/ahoy/\.github/workflows/release\.yml@' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+`Verified OK` means the checksums file was produced by Ahoy's own release
+workflow. Check the artifacts against it as above, and the whole download is
+accounted for.
+
+<Aside type="caution" title="Requires v3.0.2">
+  Signatures are published from v3.0.2 onwards. Earlier releases have checksums
+  but no `.bundle` file. Note also that cosign v3 replaced the older
+  `--output-signature` and `--output-certificate` flags with `--bundle`, so
+  examples written for cosign v2 will not work.
+</Aside>
+
 ## Start with examples
 
 The quickest way to get going is to initialise a project with our curated examples file. It includes 30+ ready-to-use commands for common development workflows.
