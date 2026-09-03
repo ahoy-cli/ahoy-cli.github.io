@@ -43,7 +43,7 @@ writes a warning to stderr and carries on:
 [warn] environment file '.env.local' not found, continuing without it. Add 'optional: true' to that entry if it is meant to be absent.
 ```
 
-The command still runs and the exit code is unchanged - only the reporting is new. Because the
+The command still runs, and the exit code is unchanged; only the reporting is new. Because the
 warning goes to stderr, a command's stdout stays clean for piping.
 
 To declare a file that is expected to be missing, write the entry as a mapping with `path` and
@@ -58,8 +58,10 @@ env:
     optional: false # Same as the plain string form
 ```
 
-`optional` carries the same meaning here as it does for
-[`imports`](/reference/yaml-schema/): the entry may legitimately not resolve to a file.
+`optional` means the same thing here as it does for
+[`imports`](/reference/yaml-schema/): the entry may legitimately not resolve to a file. It is set on
+the env entry itself, though - the command-level `optional` flag covers imports only, and does not
+silence a missing env file.
 
 The two forms mix freely within one list, and both work at the global and per-command level. Every
 pre-v3.0.1 form parses unchanged: the `env: .env` shorthand, plain lists, empty lists and nulls.
