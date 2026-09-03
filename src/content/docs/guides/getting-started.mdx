@@ -49,6 +49,32 @@ Verify it's working:
 ahoy --version
 ```
 
+## Verifying your download
+
+Every release ships an `ahoy_<version>_checksums.txt` listing a SHA-256 for each
+published file, so you can confirm a download arrived intact.
+
+```bash
+VERSION=3.0.1
+BASE=https://github.com/ahoy-cli/ahoy/releases/download/v$VERSION
+
+curl -fsSLO $BASE/ahoy-bin-linux-amd64
+curl -fsSLO $BASE/ahoy_${VERSION}_checksums.txt
+
+sha256sum -c ahoy_${VERSION}_checksums.txt --ignore-missing
+```
+
+`--ignore-missing` checks only the files you actually downloaded, rather than
+complaining about the thirty or so you did not. On macOS, use
+`shasum -a 256 -c` in place of `sha256sum -c`.
+
+<Aside type="note" title="Older releases">
+  From v3.0.1 the checksums file covers the individual `ahoy-bin-*` binaries as
+  well as the `.tar.gz` and `.zip` archives. In v3.0.0 and earlier it listed only
+  the archives and SBOMs, so the binary the install command downloads could not
+  be verified.
+</Aside>
+
 ## Start with examples
 
 The quickest way to get going is to initialise a project with our curated examples file. It includes 30+ ready-to-use commands for common development workflows.
