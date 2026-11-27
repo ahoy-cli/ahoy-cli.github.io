@@ -10,15 +10,15 @@ import { Aside } from "@astrojs/starlight/components";
 When you run a command, Ahoy:
 
 1. Uses the file given with `--file` (or `-f`), if there is one
-2. Otherwise looks for `.ahoy.yml` in the current folder, then in each parent folder
-3. Changes to the folder that file is in
+2. Otherwise looks for `.ahoy.yml` in the current directory, then in each parent directory
+3. Changes to the directory that file is in
 4. Runs your command from there
 
-So a command behaves the same whichever subfolder you run it from.
+This means you can run `ahoy` from any subdirectory in your project and it always behaves consistently.
 
 ## Arguments
 
-Arguments arrive as bash positional parameters:
+Arguments are passed to commands as bash positional parameters:
 
 ```yaml
 commands:
@@ -38,7 +38,7 @@ ahoy copy src.txt dest.txt
 ahoy run-in-container npm test
 ```
 
-`"$@"` passes every argument through. `$#` is the number of arguments and `$0` is the command name.
+`$@` passes all arguments through, which is handy for wrapper commands. Use `$#` to check the argument count, and `$0` for the command name.
 
 Everything after the command name reaches your command unchanged, flags included, so wrapping a tool with its own options just works:
 
@@ -76,9 +76,9 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
 
-From a terminal you get a real prompt, line editing and working pipes. From a script or CI job, the command sees the same pipes or files it would see without Ahoy. Output also appears as it's produced, not all at once when the command finishes.
+From a terminal you get a real prompt, line editing and working pipes. From a script or CI job, the command sees the same pipes or files it would see without Ahoy.
 
-### Full-screen tools
+### Full-screen tools and TUI commands
 
 Full-screen and menu tools need to ask the terminal how big it is. Because Ahoy hands over the real terminal, they get the right answer and draw properly:
 
@@ -100,6 +100,9 @@ This covers tools built on [Bubble Tea](https://github.com/charmbracelet/bubblet
   nothing, and `gum` on Bubble Tea v2 crashed. If an interactive command shows a blank screen on
   v3.0.0, upgrade. See [issue #180](https://github.com/ahoy-cli/ahoy/issues/180).
 </Aside>
+
+Output is not buffered either - a long-running command's output appears as it
+is produced, not in a burst when the command exits.
 
 ## Custom entrypoints
 
@@ -163,6 +166,6 @@ commands:
 ## Troubleshooting
 
 - Run with `--verbose` (before the command name) to see the exact command Ahoy ran.
-- Commands run in a subshell. They get a copy of your environment, but can't change your current folder or set variables in your shell.
+- Commands run in a subshell. They get a copy of your environment, but can't change your current directory or set variables in your shell.
 - Quotes can get lost when one command passes arguments to another. Check `--verbose` first, then try swapping single and double quotes. Using `cmd: |` for anything complicated keeps YAML quoting out of the way.
 - If Ahoy can't read your file, run `ahoy config validate`. It reports YAML mistakes and fields Ahoy doesn't support.

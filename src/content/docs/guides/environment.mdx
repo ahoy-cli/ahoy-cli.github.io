@@ -30,7 +30,7 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
 
-The path is relative to `.ahoy.yml`, not to the folder you're in.
+The path is relative to `.ahoy.yml`, not to the directory you're in.
 
 ## For every command, or just one
 
@@ -48,7 +48,7 @@ commands:
     cmd: ./deploy.sh
 ```
 
-## Several files <Badge text="v2.5.0+" variant="note" />
+## Multiple files <Badge text="v2.5.0+" variant="note" />
 
 Either `env` can be a list. Files load in order, and later files override earlier ones:
 
