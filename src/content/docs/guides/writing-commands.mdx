@@ -1,15 +1,15 @@
 ---
-title: Writing Commands
-description: Practical patterns for writing great Ahoy commands
+title: Writing commands
+description: Patterns for writing Ahoy commands your team will use
 ---
 
 import { Aside, Badge } from "@astrojs/starlight/components";
 
-Ahoy commands are shell commands wrapped in YAML. This guide covers the patterns that make them readable, reusable, and a pleasure for your whole team to use.
+An Ahoy command is a shell command with a name and some help text, written in YAML.
 
 ## A minimal command
 
-Every command needs a name and a `cmd`. Everything else is optional but encouraged:
+A command needs a name and a `cmd`. Everything else is optional, but a `usage` line is worth adding:
 
 ```yaml
 ahoyapi: v2
@@ -20,11 +20,11 @@ commands:
     cmd: echo "Hello, $1!"
 ```
 
-The `usage` line is what your team sees when they run `ahoy` - make it count.
+The `usage` line is what people see when they run `ahoy`, so keep it short and clear.
 
 ## Arguments
 
-Arguments are passed through as standard bash positional parameters:
+Arguments arrive as normal bash positional parameters. Use `$1`, `$2` and so on for specific ones, or `"$@"` to pass them all through:
 
 ```yaml
 commands:
@@ -32,47 +32,27 @@ commands:
     usage: Open a shell in a container
     cmd: docker compose exec $1 bash
 
-  copy:
-    usage: Copy a file between containers
-    cmd: docker compose cp $1 $2
-
   run:
     usage: Run any command in the app container
     cmd: docker compose exec app "$@"
 ```
 
-`$1`, `$2` for specific positions; `$@` to forward everything. The last pattern is great for transparent wrappers:
-
 ```bash
-ahoy run npm test -- --watch
-```
-
-Flags count as arguments. Everything after the command name reaches your
-command exactly as typed, in order, and Ahoy never claims any of it:
-
-```bash
+ahoy shell web
 ahoy run npm test --watch
 ahoy run chown -R www-data:www-data .
 ```
 
-Ahoy consumes a `--` only when it is the first thing after the command name,
-where it has always just meant "the rest is arguments". A `--` anywhere else
-belongs to your command, so wrapping a tool that needs its own separator works
-as you would expect:
-
-```bash
-ahoy k exec mypod -- ls /app       # kubectl gets its separator
-ahoy run npm test -- --watch       # npm passes --watch to the test script
-```
+Flags count as arguments. Everything you type after the command name reaches your command as typed, in the same order. [Command execution](/guides/command-execution#arguments) has the details, including how `--` is handled.
 
 ## Multi-line scripts
 
-Use the YAML block scalar (`|`) for anything beyond a single line. Standard bash applies:
+For anything longer than one line, use a YAML block (`|`). It's normal bash inside:
 
 ```yaml
 commands:
   setup:
-    usage: Initialise the project from scratch
+    usage: Set up the project from scratch
     cmd: |
       echo "Installing dependencies..."
       npm install
@@ -83,30 +63,30 @@ commands:
       echo "All done. Run 'ahoy start' to begin."
 ```
 
-## Descriptions for complex commands <Badge text="v3" variant="success" />
+## Longer help text <Badge text="v3" variant="success" />
 
-`usage` is the one-liner shown in the listing. `description` is fuller help shown when someone runs `ahoy help <command>`:
+`usage` is the one line shown in the list. `description` is longer help, shown when someone runs `ahoy help <command>`:
 
 ```yaml
 commands:
   deploy:
     usage: Deploy the application
     description: |
-      Deploys to the specified environment, running tests and building
-      assets first. Requires .env.deploy to be configured.
+      Deploys to the given environment, running tests and building
+      assets first. Needs .env.deploy to be set up.
 
       Usage:
         ahoy deploy staging
         ahoy deploy production
 
-      The production deploy will prompt for confirmation unless CI=true
-      is set in the environment.
+      The production deploy asks for confirmation unless CI=true
+      is set.
     cmd: ./scripts/deploy.sh $1
 ```
 
-## Aliases <Badge text="v2.1.0+" variant="tip" />
+## Aliases <Badge text="v2.2.0+" variant="tip" />
 
-Short names for commonly-used commands. They appear in the help listing alongside the primary name:
+Aliases are short names for a command. They're listed next to the main name:
 
 ```yaml
 commands:
@@ -121,11 +101,11 @@ commands:
     cmd: docker compose exec app bash
 ```
 
-A good rule of thumb: use a descriptive primary name and short aliases for the commands you type dozens of times a day.
+Give the command a descriptive name, and add short aliases for the ones you type all day.
 
-## Chaining commands
+## Calling other commands
 
-Call other Ahoy commands from within a command - Ahoy is always on the path:
+A command can run other Ahoy commands:
 
 ```yaml
 commands:
@@ -145,9 +125,9 @@ commands:
       ahoy install
 ```
 
-## Protecting destructive operations
+## Asking before destructive commands
 
-A `confirm` helper is a useful pattern for commands that can't be undone. The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml) includes a battle-tested implementation that supports both interactive use and automation (via `AHOY_CONFIRM_RESPONSE=y`):
+For commands that can't be undone, add a `confirm` helper that asks first. The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml) has one that also works in scripts and CI, where you answer in advance with `AHOY_CONFIRM_RESPONSE=y`:
 
 ```yaml
 commands:
@@ -175,11 +155,11 @@ commands:
       fi
 ```
 
-The `hide: true` field keeps internal helpers out of the listing without disabling them.
+`hide: true` keeps a helper out of the command list. You can still run it.
 
-## Wrapper commands
+## Wrapping other tools
 
-Ahoy is excellent for wrapping long container commands so they feel native:
+Ahoy works well for wrapping long container commands:
 
 ```yaml
 commands:
@@ -196,10 +176,7 @@ commands:
     cmd: docker compose exec app node "$@"
 ```
 
-Then your team just runs `ahoy drush cache:rebuild` or `ahoy composer require vendor/package`.
-
-The wrapped tool keeps its own flags, including the ones that would otherwise
-be Ahoy's:
+Now the team can run `ahoy drush cache:rebuild` or `ahoy composer require vendor/package`. The wrapped tool gets all its own flags, even ones Ahoy also uses:
 
 ```bash
 ahoy drush --help                     # Drush's help
@@ -208,21 +185,17 @@ ahoy drush sql:query --extra=-A "SELECT 1"
 ahoy node --version
 ```
 
-The one thing to know: since `--help` belongs to the wrapped tool, Ahoy's own
-help for a command is `ahoy help drush`.
+Because `--help` goes to the wrapped tool, use `ahoy help drush` to see Ahoy's help for the command.
 
 <Aside type="caution" title="Fixed in v3.0.1">
-  Ahoy v3.0.0 parsed a command's arguments before running it and silently
-  dropped any flag it did not recognise, along with the token following it -
-  so `ahoy fix-perms chown -R www-data:www-data .` arrived as `chown .`. The
-  wrapped tool ran successfully with different arguments, which made this
-  quiet rather than loud. Upgrade if you wrap anything that takes flags. See
-  [issue #182](https://github.com/ahoy-cli/ahoy/issues/182).
+  Ahoy v3.0.0 dropped any flag it didn't recognise, along with the word after it, without telling
+  you. So `ahoy fix-perms chown -R www-data:www-data .` ran as `chown .`. Upgrade if you wrap
+  anything that takes flags. See [issue #182](https://github.com/ahoy-cli/ahoy/issues/182).
 </Aside>
 
-## Environment-specific commands <Badge text="v2.3.0+" variant="tip" />
+## Commands with their own env file <Badge text="v2.3.0+" variant="tip" />
 
-Use the `env` field for commands that need their own configuration:
+Use `env` to load settings for one command:
 
 ```yaml
 commands:
@@ -234,19 +207,14 @@ commands:
       rsync -avz ./dist/ $DEPLOY_HOST:$DEPLOY_PATH
 ```
 
-See the [Environment guide](/guides/environment) for the full picture on env files and precedence.
+The [Environment variables guide](/guides/environment) covers env files in full.
 
-## Real-world examples
+## Example files
 
-The repository includes ready-to-use example files you can copy and adapt:
+The repository has example files you can copy:
 
-- **[examples.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)** - the comprehensive starter file (30+ commands covering Docker, databases, testing, Drupal, deployment, and more). Download it with `ahoy config init`.
-- **[docker.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/docker.ahoy.yml)** - a focused set of Docker Compose commands, useful as an import in your own config.
-- **[confirmation.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/confirmation.ahoy.yml)** - a standalone confirmation helper you can import.
+- [examples.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml): around 30 commands for Docker, databases, testing, Drupal and deployment. `ahoy config init` downloads it, and it uses nearly every Ahoy feature, so it's a good file to read.
+- [docker.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/docker.ahoy.yml): Docker Compose commands to import into your own config.
+- [confirmation.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/confirmation.ahoy.yml): the confirmation helper on its own, ready to import.
 
-<Aside type="tip">
-  The best way to learn is to read `examples.ahoy.yml` - it demonstrates nearly every Ahoy feature
-  with real, usable commands. Run `ahoy config init` to drop it into your project.
-</Aside>
-
-For the complete field-by-field specification, see the [YAML Schema reference](/reference/yaml-schema).
+Every field is listed in the [YAML schema](/reference/yaml-schema).

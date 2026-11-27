@@ -1,24 +1,24 @@
 ---
-title: Command Execution
+title: Command execution
 description: How Ahoy finds and runs your commands
 ---
 
 import { Aside } from "@astrojs/starlight/components";
 
-## How Ahoy finds your config
+## Finding your config
 
-When you run an Ahoy command, it:
+When you run a command, Ahoy:
 
-1. Checks for a `--file` (or `-f`) flag to use a specific config file
-2. Otherwise, searches upward from the current directory for `.ahoy.yml`
-3. Changes to the directory containing that file
-4. Executes your command relative to that directory
+1. Uses the file given with `--file` (or `-f`), if there is one
+2. Otherwise looks for `.ahoy.yml` in the current folder, then in each parent folder
+3. Changes to the folder that file is in
+4. Runs your command from there
 
-This means you can run `ahoy` from any subdirectory in your project and it always behaves consistently.
+So a command behaves the same whichever subfolder you run it from.
 
 ## Arguments
 
-Arguments are passed to commands as bash positional parameters:
+Arguments arrive as bash positional parameters:
 
 ```yaml
 commands:
@@ -38,10 +38,9 @@ ahoy copy src.txt dest.txt
 ahoy run-in-container npm test
 ```
 
-`$@` passes all arguments through, which is handy for wrapper commands. Use `$#` to check the argument count, and `$0` for the command name.
+`"$@"` passes every argument through. `$#` is the number of arguments and `$0` is the command name.
 
-Everything after the command name reaches your command verbatim, flags
-included, so wrapping a tool that takes its own options needs nothing special:
+Everything after the command name reaches your command unchanged, flags included, so wrapping a tool with its own options just works:
 
 ```yaml
 commands:
@@ -53,14 +52,18 @@ commands:
 ahoy phpunit --filter=MyTest --stop-on-failure
 ```
 
-Ahoy's own flags - `--verbose`, `--file` and friends - are only recognised
-before the command name, so they never collide with your command's options.
+Ahoy's own flags, such as `--verbose` and `--file`, only count when they come before the command name, so they can't clash with your command's options.
+
+Ahoy removes a `--` only when it comes straight after the command name. Any other `--` is passed to your command, which matters for tools that use their own separator:
+
+```bash
+ahoy k exec mypod -- ls /app       # kubectl gets its --
+ahoy run npm test -- --watch       # npm passes --watch to the test script
+```
 
 ## Interactive commands
 
-All three standard streams - stdin, stdout and stderr - are inherited from the
-process that invoked Ahoy. Ahoy does not read, buffer or copy them, so a command
-runs exactly as it would if you had typed it yourself:
+Commands use the same stdin, stdout and stderr as the terminal or script that ran Ahoy. Ahoy doesn't read, buffer or copy them, so a command behaves exactly as if you'd typed it yourself:
 
 ```yaml
 commands:
@@ -73,18 +76,11 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
 
-When you run these from a terminal, the inherited streams are attached to a
-TTY, so they run fully interactively - you get a real prompt, readline support,
-and piping all work as expected. Invoked from a script or CI job, where the
-streams are pipes or files instead, the command sees exactly what it would see
-there without Ahoy.
+From a terminal you get a real prompt, line editing and working pipes. From a script or CI job, the command sees the same pipes or files it would see without Ahoy. Output also appears as it's produced, not all at once when the command finishes.
 
-### Full-screen and TUI commands
+### Full-screen tools
 
-Because the streams are the inherited descriptors rather than a copy of them,
-commands can ask about them directly - whether they are a TTY at all, and if so
-the terminal size - and get a true answer. When Ahoy is run from a terminal that
-is what full-screen and menu-driven tools need in order to draw:
+Full-screen and menu tools need to ask the terminal how big it is. Because Ahoy hands over the real terminal, they get the right answer and draw properly:
 
 ```yaml
 commands:
@@ -97,47 +93,17 @@ commands:
     cmd: docker compose logs --tail=1000 | fzf --tac
 ```
 
-Tools built on [Bubble Tea](https://github.com/charmbracelet/bubbletea) - `gum`,
-`glow` and similar - draw on stderr specifically, as do progress bars, spinners
-and anything that repaints in place.
+This covers tools built on [Bubble Tea](https://github.com/charmbracelet/bubbletea) such as `gum` and `glow`, which draw on stderr, along with progress bars and spinners.
 
 <Aside type="caution" title="Fixed in v3.0.1">
-  Ahoy v3.0.0 routed stderr through an internal pipe. Bytes still reached your
-  terminal, but the terminal itself was no longer on the other end, so these
-  tools measured a 0x0 screen and drew nothing - or, with `gum` on Bubble Tea
-  v2, crashed outright. If you are on v3.0.0 and an interactive command renders
-  blank, upgrade. See [issue #180](https://github.com/ahoy-cli/ahoy/issues/180).
+  Ahoy v3.0.0 sent stderr through an internal pipe. These tools then saw a 0x0 screen and drew
+  nothing, and `gum` on Bubble Tea v2 crashed. If an interactive command shows a blank screen on
+  v3.0.0, upgrade. See [issue #180](https://github.com/ahoy-cli/ahoy/issues/180).
 </Aside>
-
-Output is not buffered either - a long-running command's output appears as it
-is produced, not in a burst when the command exits.
-
-## Chaining commands
-
-You can call other Ahoy commands from within a command:
-
-```yaml
-commands:
-  ci:
-    usage: Run the full CI pipeline locally
-    cmd: |
-      ahoy install
-      ahoy lint
-      ahoy test
-
-  install:
-    cmd: npm install
-
-  lint:
-    cmd: npm run lint
-
-  test:
-    cmd: npm test
-```
 
 ## Custom entrypoints
 
-The default entrypoint is `bash -c '{{cmd}}'`. Override it at the file level to use a different interpreter:
+By default Ahoy runs each command with `bash -c '{{cmd}}'`. Set `entrypoint` at the top of the file to use a different interpreter:
 
 ```yaml
 ahoyapi: v2
@@ -165,26 +131,24 @@ commands:
     cmd: print("Hello from Python!")
 ```
 
-Entrypoint template variables:
+The entrypoint can use these placeholders:
 
-- `{{cmd}}` - replaced with the command body
-- `{{name}}` - replaced with the command name (also available as `$0`)
+- `{{cmd}}`: the command body
+- `{{name}}`: the command name (also available as `$0`)
 
 ## Exit codes
 
-Ahoy passes exit codes through unchanged. If a command exits non-zero, Ahoy exits non-zero. This works naturally with shell pipelines:
+Ahoy exits with your command's exit code, so you can chain commands in the shell:
 
 ```bash
 ahoy test && ahoy deploy
 ```
 
-## Controlling execution within a command
+Inside a command, the usual bash operators decide what runs next:
 
-Because the command body is bash, the usual operators control what runs next:
-
-- `&&` - run the next command only if the previous one succeeded (exit `0`)
-- `||` - run the next command only if the previous one failed (non-zero exit)
-- `;` - always run the next command
+- `&&` runs the next command only if the previous one succeeded
+- `||` runs the next command only if the previous one failed
+- `;` always runs the next command
 
 ```yaml
 commands:
@@ -196,9 +160,9 @@ commands:
       echo "4 - Do this no matter what"
 ```
 
-## Debugging and gotchas
+## Troubleshooting
 
-- **Use `--verbose` to see what actually ran.** It prints the resolved command before executing it, which is the fastest way to diagnose an unexpected result.
-- **Commands run in a subshell.** Environment variables are copied in, but nothing a command does can change your parent shell - it cannot change your current directory or set variables for your session.
-- **Quotes can be tricky.** When passing a command through to a subcommand, quotes can be lost along the way. Check `--verbose` first, then experiment with single versus double quotes. Prefer `cmd: |` for anything complex so YAML quoting stays out of the way.
-- **Check your YAML if Ahoy complains.** Indentation and structure errors surface as parse failures; `ahoy config validate` reports them along with unsupported fields.
+- Run with `--verbose` (before the command name) to see the exact command Ahoy ran.
+- Commands run in a subshell. They get a copy of your environment, but can't change your current folder or set variables in your shell.
+- Quotes can get lost when one command passes arguments to another. Check `--verbose` first, then try swapping single and double quotes. Using `cmd: |` for anything complicated keeps YAML quoting out of the way.
+- If Ahoy can't read your file, run `ahoy config validate`. It reports YAML mistakes and fields Ahoy doesn't support.
