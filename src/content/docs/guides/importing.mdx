@@ -1,15 +1,15 @@
 ---
-title: Importing & Overriding
-description: Splitting commands across multiple files and overriding inherited commands
+title: Importing & overriding
+description: Split commands across several files and override imported commands
 ---
 
 import { Aside, Badge } from "@astrojs/starlight/components";
 
-As your command set grows, you can split it across multiple YAML files using `imports`.
+When your `.ahoy.yml` gets long, you can move groups of commands into other files with `imports`.
 
-## Basic imports
+## Importing a file
 
-A command with `imports` instead of `cmd` becomes a namespace for subcommands loaded from other files:
+Give a command `imports` instead of `cmd`, and the commands in those files become its subcommands:
 
 ```yaml
 # .ahoy.yml
@@ -28,7 +28,7 @@ ahoyapi: v2
 
 commands:
   backup:
-    usage: Backup the database
+    usage: Back up the database
     cmd: mysqldump -u$DB_USER -p$DB_PASS $DB_NAME > backup.sql
 
   restore:
@@ -36,11 +36,17 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME < $1
 ```
 
-This gives you `ahoy db backup` and `ahoy db restore`.
+Now you have `ahoy db backup` and `ahoy db restore`.
+
+Every imported file needs its own `ahoyapi: v2` line.
+
+<Aside type="note">
+  Import paths are relative to the file that contains them, not to the directory you're in.
+</Aside>
 
 ## Optional imports <Badge text="v2.2.0+" variant="tip" />
 
-Mark an import as `optional: true` to silently skip the whole command if none of its files can be found. Useful for local or team-specific command sets that not everyone has:
+Normally Ahoy stops with an error if an imported file is missing. Add `optional: true` and Ahoy skips the command quietly instead. This suits personal or team-only commands that not everyone has:
 
 ```yaml
 ahoyapi: v2
@@ -53,11 +59,11 @@ commands:
       - ./local.ahoy.yml
 ```
 
-If `local.ahoy.yml` doesn't exist, `ahoy local` simply won't appear in the listing. Without `optional: true`, a missing import file is a fatal error.
+If `local.ahoy.yml` doesn't exist, `ahoy local` just doesn't appear in the list.
 
 ## Overriding commands
 
-Ahoy uses a "last in wins" rule. When the same command name appears in multiple imported files, the last definition wins:
+When two commands have the same name, the last one defined wins:
 
 ```yaml
 # .ahoy/base.ahoy.yml
@@ -83,11 +89,11 @@ commands:
     cmd: npm test -- --coverage
 ```
 
-The top-level `test` command overrides the imported one.
+Here the `test` in `.ahoy.yml` replaces the imported one.
 
-## Typical structure
+## A typical layout
 
-A common pattern for larger projects:
+Larger projects often keep one file per topic:
 
 ```
 project/
@@ -119,14 +125,9 @@ commands:
       - ./.ahoy/deploy.ahoy.yml
 ```
 
-<Aside type="note">
-  Import paths are relative to the directory containing the file that declares them, not your
-  working directory.
-</Aside>
+## Sharing commands between projects
 
-## Sharing commands across projects
-
-Import paths can traverse outside the project directory, which makes it possible to maintain shared command libraries:
+Import paths can point outside the project, so several projects can share one set of commands:
 
 ```yaml
 commands:
@@ -134,5 +135,3 @@ commands:
     imports:
       - ../../shared-ahoy/docker.ahoy.yml
 ```
-
-Each imported file must also declare `ahoyapi: v2`.

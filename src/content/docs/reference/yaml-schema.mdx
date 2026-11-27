@@ -5,22 +5,20 @@ description: Complete technical reference for the Ahoy YAML configuration schema
 
 import { Aside, Badge } from "@astrojs/starlight/components";
 
-# YAML Schema Reference
+Every field Ahoy supports in its YAML config files, with types, defaults and validation rules. The **Implementation** lines name the Go function that handles each field, for anyone reading the source.
 
-This technical reference documents the complete schema for Ahoy YAML configuration files. It details all supported fields, validation rules, and implementation details as defined in the Ahoy codebase.
+## YAML file format
 
-## YAML File Format
+Ahoy reads commands and settings from a YAML file. By default it looks for `.ahoy.yml` in the current directory, then in each parent directory. Use `-f` to point at a different file.
 
-Ahoy uses YAML configuration files to define commands and settings. By default, Ahoy looks for a file named `.ahoy.yml` in the current directory or any parent directory. A custom file can be specified using the `-f` flag.
+## Schema structure
 
-## Schema Structure
-
-The Ahoy configuration schema consists of two main data structures:
+The schema has two parts:
 
 1. **Config** - The top-level object containing global settings and commands
 2. **Command** - Individual command definitions within the `commands` map
 
-## Top-Level Fields
+## Top-level fields
 
 ```yaml
 # Required: API version declaration
@@ -46,13 +44,13 @@ commands:
     cmd: command to run
 ```
 
-## Field Specifications
+## Field specifications
 
 ### `ahoyapi`
 
 **Required**: Yes  
 **Type**: String  
-**Allowed Values**: `v2`  
+**Allowed values**: `v2`  
 **Default**: None  
 **Implementation**: Validated in `getConfig()` function  
 **Description**: Specifies the Ahoy API version to use. Currently only version `v2` is supported. This field is required in all Ahoy files including imported ones to ensure forward compatibility.
@@ -61,7 +59,7 @@ commands:
 ahoyapi: v2
 ```
 
-**Validation Rule**: If this field is not set to `v2`, Ahoy will exit with an error.
+**Validation rule**: If this field is not set to `v2`, Ahoy will exit with an error.
 
 ### `usage`
 
@@ -69,7 +67,7 @@ ahoyapi: v2
 **Type**: String  
 **Default**: `"Creates a configurable cli app for running commands."`  
 **Implementation**: Set in `setupApp()` function  
-**Description**: Defines the usage description for the entire Ahoy application, displayed in help text.
+**Description**: A description of the whole command set, shown in Ahoy's help text.
 
 ```yaml
 usage: "Collection of commands for the project"
@@ -81,9 +79,9 @@ usage: "Collection of commands for the project"
 **Type**: String, Array of Strings, or Array of Strings and Mappings  
 **Default**: None  
 **Implementation**: Processed in `getCommands()` function  
-**Description**: Path(s) to global environment file(s), relative to the YAML file location. Environment variables defined here are available to all commands in this configuration file. Supports both single file and multiple files syntax.
+**Description**: Path(s) to global environment file(s), relative to the YAML file location. Variables defined here are available to every command in this file. Takes a single path or a list.
 
-**Single Environment File (backwards compatible)**:
+**Single environment file (backwards compatible)**:
 
 ```yaml
 env: .env
@@ -91,7 +89,7 @@ env: .env.local
 env: ../shared/config.env
 ```
 
-**Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+**Multiple environment files** <Badge text="v2.5.0+" variant="note" size="small" />:
 
 ```yaml
 env:
@@ -100,11 +98,11 @@ env:
   - .env.override
 ```
 
-**Optional Environment Files** <Badge text="v3.0.1+" variant="success" size="small" />:
+**Optional environment files** <Badge text="v3.0.1+" variant="success" size="small" />:
 
 An entry written as a mapping takes a `path` and an `optional` flag. Entries are required by
-default; a required file that is absent is reported on stderr, while an optional one is passed over
-without comment. Both forms may be mixed in the same list.
+default: a missing required file is reported on stderr, and a missing optional one is skipped
+quietly. You can mix both forms in one list.
 
 ```yaml
 env:
@@ -113,15 +111,15 @@ env:
     optional: true # Silent when absent
 ```
 
-**Technical Details**:
+**Technical details**:
 
 - Environment variables are loaded at runtime and passed to command processes
 - When using multiple files, they are loaded in order with later files overriding earlier ones
 - Blank lines and lines starting with '#' are ignored
 - Variables from global files can be overridden by command-specific environment files
 - A non-existent file is skipped and the command still runs; from v3.0.1 it is reported on stderr
-  unless that entry is marked `optional: true`. This is set per env entry, and is a different thing
-  from the command-level [`optional`](#optional-) flag, which covers imports only
+  unless that entry is marked `optional: true`. This is set per env entry, and is separate from
+  the command-level [`optional`](#optional-) flag, which only covers imports
 - Maintains full backwards compatibility with single file syntax
 
 ### `entrypoint`
@@ -130,7 +128,7 @@ env:
 **Type**: Array of Strings  
 **Default**: `["bash", "-c", "{{cmd}}", "{{name}}"]`  
 **Implementation**: Default set in `getConfig()`, replacement in command action  
-**Description**: Defines the command interpreter and arguments used to execute commands. The default uses bash.
+**Description**: The interpreter and arguments used to run each command. The default is bash.
 
 ```yaml
 entrypoint:
@@ -140,12 +138,12 @@ entrypoint:
   - "{{name}}"
 ```
 
-**Template Variables**:
+**Template variables**:
 
 - `{{cmd}}`: Replaced with the command's `cmd` value
 - `{{name}}`: Replaced with the command name
 
-**Implementation Details**:
+**Implementation details**:
 
 - Template variables are replaced at runtime before execution
 - The final command is executed with the working directory set to the directory containing the YAML file
@@ -156,13 +154,13 @@ entrypoint:
 **Type**: Map of command definitions  
 **Default**: None  
 **Implementation**: Processed in `getCommands()` function  
-**Description**: Container for all command definitions. Each key represents a command name, and its value is a command configuration object.
+**Description**: Holds all command definitions. Each key is a command name, and its value is that command's settings.
 
-**Validation Rule**: This field must be present and contain at least one command.
+**Validation rule**: This field must be present and contain at least one command.
 
-## Command Definition Fields
+## Command definition fields
 
-Each command defined under `commands` can have the following fields:
+Each command under `commands` can have these fields:
 
 ### `usage`
 
@@ -170,7 +168,7 @@ Each command defined under `commands` can have the following fields:
 **Type**: String  
 **Default**: Empty  
 **Implementation**: Set in CLI command setup in `getCommands()`  
-**Description**: Short help text shown when running `ahoy help command-name`. This appears as a brief summary in the command listing.
+**Description**: A one-line summary, shown in the command list and in `ahoy help command-name`.
 
 ```yaml
 commands:
@@ -184,7 +182,7 @@ commands:
 **Type**: String  
 **Default**: Empty  
 **Implementation**: Set in CLI command setup in `getCommands()`  
-**Description**: Longer, detailed description shown when running `ahoy help command-name`. This is displayed below the usage text and supports multi-line content for comprehensive documentation.
+**Description**: Longer help shown by `ahoy help command-name`, below the usage text. It can span several lines.
 
 ```yaml
 commands:
@@ -214,7 +212,7 @@ commands:
 **Type**: String  
 **Default**: None  
 **Implementation**: Executed through the entrypoint in command action  
-**Description**: The command to execute. Can be a single line or a multi-line command.
+**Description**: The command to run, on one line or several.
 
 ```yaml
 commands:
@@ -228,7 +226,7 @@ commands:
       echo "Done!"
 ```
 
-**Technical Details**:
+**Technical details**:
 
 - Executed through the configured entrypoint (default is bash)
 - Has access to environment variables from both global and command-specific env files
@@ -240,7 +238,7 @@ commands:
 **Type**: Array of Strings  
 **Default**: Empty  
 **Implementation**: Set in CLI command setup in `getCommands()`  
-**Description**: Alternative names for invoking the command. Each alias can be used interchangeably with the primary command name.
+**Description**: Other names that run the same command.
 
 ```yaml
 commands:
@@ -267,13 +265,13 @@ commands:
       - ./commands/docker.ahoy.yml
 ```
 
-**Validation Rules**:
+**Validation rules**:
 
 - Cannot be used together with `cmd` (must specify one or the other)
 - Must contain at least one item if specified
 - If the imports don't resolve to valid files and `optional` is false, Ahoy will exit with an error
 
-**Implementation Details**:
+**Implementation details**:
 
 - Relative paths are resolved based on the parent YAML file location
 - Commands from the imported files become subcommands under this command
@@ -285,9 +283,9 @@ commands:
 **Type**: String, Array of Strings, or Array of Strings and Mappings  
 **Default**: None  
 **Implementation**: Processed in command action  
-**Description**: Path(s) to command-specific environment file(s), relative to the YAML file location. Variables defined here override any with the same name in the global env files. Supports both single file and multiple files syntax.
+**Description**: Path(s) to command-specific environment file(s), relative to the YAML file location. Variables defined here override any with the same name from the global env files. Takes a single path or a list.
 
-**Single Environment File (backwards compatible)**:
+**Single environment file (backwards compatible)**:
 
 ```yaml
 commands:
@@ -297,7 +295,7 @@ commands:
     cmd: ./deploy.sh
 ```
 
-**Multiple Environment Files** <Badge text="v2.5.0+" variant="note" size="small" />:
+**Multiple environment files** <Badge text="v2.5.0+" variant="note" size="small" />:
 
 ```yaml
 commands:
@@ -310,7 +308,7 @@ commands:
     cmd: ./deploy.sh
 ```
 
-**Optional Environment Files** <Badge text="v3.0.1+" variant="success" size="small" />:
+**Optional environment files** <Badge text="v3.0.1+" variant="success" size="small" />:
 
 ```yaml
 commands:
@@ -323,13 +321,13 @@ commands:
     cmd: ./deploy.sh
 ```
 
-**Technical Details**:
+**Technical details**:
 
 - When using multiple files, they are loaded in order with later files overriding earlier ones
 - Command-specific environment files always override global environment files
 - A non-existent file is skipped and the command still runs; from v3.0.1 it is reported on stderr
-  unless that entry is marked `optional: true`. This is set per env entry, and is a different thing
-  from the command-level [`optional`](#optional-) flag, which covers imports only
+  unless that entry is marked `optional: true`. This is set per env entry, and is separate from
+  the command-level [`optional`](#optional-) flag, which only covers imports
 - Maintains full backwards compatibility with single file syntax
 
 ### `hide`
@@ -338,7 +336,7 @@ commands:
 **Type**: Boolean  
 **Default**: `false`  
 **Implementation**: Set in CLI command setup in `getCommands()`  
-**Description**: When set to `true`, the command will not be shown in the help output, but can still be invoked.
+**Description**: When `true`, the command is left out of the help output but can still be run.
 
 ```yaml
 commands:
@@ -354,7 +352,7 @@ commands:
 **Type**: Boolean  
 **Default**: `false`  
 **Implementation**: Checked in `getCommands()` function  
-**Description**: When set to `true`, prevents errors when a command's imported files are not found. Used primarily for optional command groups. It applies to `imports` and nothing else.
+**Description**: When `true`, a command whose imported files can't be found is skipped instead of causing an error. It applies to `imports` and nothing else.
 
 ```yaml
 commands:
@@ -383,7 +381,7 @@ commands:
   See [`env`](#env-) <Badge text="v3.0.1+" variant="success" size="small" /> for the mapping form.
 </Aside>
 
-## Complete Schema Example
+## Complete schema example
 
 ```yaml
 ahoyapi: v2
@@ -439,37 +437,22 @@ commands:
       echo "Done!"
 ```
 
-## Environment File Format
+## Environment file format
 
-Environment files use standard shell format:
+See the [Environment variables reference](/reference/environment#file-format-specification).
 
-```bash
-# Comments are supported
-VARIABLE=value
-QUOTED="value with spaces"
-
-# Multi-line values
-CERT="-----BEGIN CERTIFICATE-----
-MIICWDCCAcGgAwIBAgIJAKe0yZE6xcJ2MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
-...
------END CERTIFICATE-----"
-
-# Export is optional
-export PATH=$PATH:/usr/local/bin
-```
-
-## Command Execution Context
+## Command execution context
 
 Commands have access to:
 
-### Positional Arguments
+### Positional arguments
 
 - `$1`, `$2`, etc.: Individual arguments
 - `$@`: All arguments as array
 - `$#`: Number of arguments
 - `$0`: Command name
 
-### Environment Variables
+### Environment variables
 
 - Variables from the shell environment
 - Variables from global env files
@@ -477,29 +460,31 @@ Commands have access to:
 - `AHOY_COMMAND_NAME` - the name of the command being run (injected by Ahoy) <Badge text="v3" variant="success" size="small" />
 - `AHOY_CMD` - path to the ahoy binary (injected by Ahoy) <Badge text="v3" variant="success" size="small" />
 
-## Special Considerations
+## Special considerations
 
-### File Paths
+### File paths
 
 - All paths are relative to the YAML file location
 - Environment file paths are also relative
 - Import paths should use `./` for current directory
 
-### Command Override Rules
+### Command override rules
 
 - Later commands override earlier ones
 - Imported commands can be overridden
 - Last definition wins
 
-### Environment Variable Precedence
+### Environment variable precedence
 
-1. Command-specific env file
-2. Global env file
-3. System environment variables
+Highest priority first:
 
-## Best Practices
+1. Command-specific env files
+2. Global env files
+3. Shell environment variables
 
-### YAML File Organisation
+## Best practices
+
+### YAML file organisation
 
 ```yaml
 # Start with version
@@ -524,7 +509,7 @@ commands:
     usage: ...
 ```
 
-### Command Naming
+### Command naming
 
 ```yaml
 commands:
@@ -537,35 +522,13 @@ commands:
     usage: Run database migrations
 ```
 
-### Usage Documentation
+### Usage text
 
-Use `usage` for brief descriptions and `description` for detailed documentation:
+Keep `usage` to one short line and put anything longer in `description`. See [`description`](#description) for an example.
 
-```yaml
-commands:
-  deploy:
-    usage: Deploy the application to specified environment
-    description: |
-      Deploy the application to the specified environment with optional version.
+## Related topics
 
-      This command performs a complete deployment including:
-      - Building the application
-      - Running tests
-      - Deploying to target environment
-      - Sending notifications
-
-      Arguments:
-        $1: Environment (dev|staging|prod)
-        $2: Version tag (optional)
-
-      Examples:
-        ahoy deploy dev v1.0.0
-        ahoy deploy prod
-```
-
-## Related Topics
-
-- [Writing Commands](guides/writing-commands)
-- [Command Execution](guides/command-execution)
-- [Environment Variables](guides/environment)
-- [CLI Reference](reference/cli)
+- [Writing commands](/guides/writing-commands)
+- [Command execution](/guides/command-execution)
+- [Environment variables](/guides/environment)
+- [CLI reference](/reference/cli)

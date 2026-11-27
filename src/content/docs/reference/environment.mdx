@@ -1,5 +1,5 @@
 ---
-title: Environment Variables Reference
+title: Environment variables reference
 description: Complete specification for environment file format, variable precedence, and Ahoy's runtime variables
 ---
 
@@ -7,15 +7,15 @@ import { Aside, Badge } from "@astrojs/starlight/components";
 
 ## Overview <Badge text="v2.3.0+" variant="tip" />
 
-Ahoy can load environment variables from files before executing any command. Files are declared using the `env` field at the config level (global) or within individual commands (per-command). Both levels accept the same three forms:
+Ahoy can load environment variables from files before it runs a command. You list the files in an `env` field, either at the top of the config (global) or inside a command (per-command). Both accept the same forms:
 
 - A single file path: `env: .env`
 - An array of file paths <Badge text="v2.5.0+" variant="note" size="small" />
-- An array mixing file paths with `{ path, optional }` mapping entries <Badge text="v3.0.1+" variant="success" size="small" />, which mark the files that are allowed to be absent - see [Optional env files](#optional-env-files-)
+- An array mixing file paths with `{ path, optional }` mapping entries <Badge text="v3.0.1+" variant="success" size="small" />, for files that are allowed to be missing. See [Optional env files](#optional-env-files-)
 
 ## File path resolution
 
-All env file paths are relative to the directory containing the `.ahoy.yml` file - not your current working directory. This ensures consistent behaviour regardless of which subdirectory you run commands from.
+Env file paths are relative to the directory containing the `.ahoy.yml` file, not your current directory, so they resolve the same way from any subdirectory.
 
 ## Precedence
 
@@ -25,10 +25,10 @@ Variables are applied in this order, from lowest to highest priority:
 2. **Global env files** - loaded in the order listed under the top-level `env` key
 3. **Command-specific env files** - loaded in the order listed under a command's `env` key
 
-Later sources override earlier ones. A command-specific variable always wins over a global one with the same name.
+Later sources override earlier ones, so a command's own variable always beats a global one with the same name.
 
 <Aside type="note">
-  A missing env file is skipped and the command still runs - specifying a file that doesn't exist is
+  A missing env file is skipped and the command still runs. Listing a file that doesn't exist is
   not an error. From <Badge text="v3.0.1+" variant="success" size="small" /> Ahoy reports the missing
   file on stderr unless its entry is marked `optional: true`; see [Optional env
   files](#optional-env-files-) below.
@@ -43,8 +43,8 @@ writes a warning to stderr and carries on:
 [warn] environment file '.env.local' not found, continuing without it. Add 'optional: true' to that entry if it is meant to be absent.
 ```
 
-The command still runs, and the exit code is unchanged; only the reporting is new. Because the
-warning goes to stderr, a command's stdout stays clean for piping.
+The command still runs with the same exit code. The warning goes to stderr, so a command's stdout
+stays clean for piping.
 
 To declare a file that is expected to be missing, write the entry as a mapping with `path` and
 `optional`:
@@ -58,10 +58,9 @@ env:
     optional: false # Same as the plain string form
 ```
 
-`optional` means the same thing here as it does for
-[`imports`](/reference/yaml-schema/): the entry may legitimately not resolve to a file. It is set on
-the env entry itself, though - the command-level `optional` flag covers imports only, and does not
-silence a missing env file.
+`optional` means the same here as it does for
+[`imports`](/reference/yaml-schema/#optional-): the file may not exist. It's set on each env entry,
+though. The command-level `optional` flag only covers imports and does not silence a missing env file.
 
 The two forms mix freely within one list, and both work at the global and per-command level. Every
 pre-v3.0.1 form parses unchanged: the `env: .env` shorthand, plain lists, empty lists and nulls.
@@ -82,7 +81,7 @@ pre-v3.0.1 form parses unchanged: the `env: .env` shorthand, plain lists, empty 
 
 ## Runtime variables <Badge text="v3" variant="success" />
 
-Ahoy automatically injects two variables into every command's environment, regardless of any `env` file configuration:
+Ahoy adds two variables to every command's environment, whatever your `env` files contain:
 
 | Variable            | Value                             |
 | ------------------- | --------------------------------- |
@@ -93,7 +92,7 @@ These cannot be overridden by env files.
 
 ## File format specification
 
-Ahoy env files use standard shell variable format. The parser follows these rules:
+Env files use the usual shell variable format, with these rules:
 
 - One variable per line: `NAME=VALUE`
 - Lines starting with `#` are treated as comments and ignored
@@ -142,11 +141,11 @@ If you need these, set variables in a shell script and call that script from you
 
 ## Variable naming
 
-By convention, environment variable names use `UPPER_SNAKE_CASE`. Names can contain letters, digits, and underscores. Names starting with a digit are technically invalid in most shells.
+Names are usually `UPPER_SNAKE_CASE`. Use letters, digits and underscores, and don't start a name with a digit: most shells won't accept it.
 
 ## Security
 
-Never commit real credentials to version control. A common pattern:
+Don't commit real credentials to version control. A common setup:
 
 ```
 project/
@@ -163,7 +162,7 @@ project/
 *.secrets
 ```
 
-## Organisation patterns
+## Ways to organise env files
 
 **By environment:**
 
@@ -182,7 +181,7 @@ project/
 .env.deploy       # Deployment configuration
 ```
 
-**Layered approach** (useful for team projects):
+**Layered** (handy for teams):
 
 ```yaml
 env:
@@ -192,7 +191,7 @@ env:
 
 ## Accessing variables in commands
 
-Variables are available through standard shell syntax in `bash` commands:
+In `bash` commands, use normal shell syntax:
 
 ```yaml
 commands:
@@ -201,7 +200,7 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS -h$DB_HOST $DB_NAME
 ```
 
-Or with defaults using bash parameter expansion:
+Or give a default with bash parameter expansion:
 
 ```yaml
 commands:
@@ -209,4 +208,4 @@ commands:
     cmd: python -m http.server ${PORT:-8000}
 ```
 
-When using a non-bash entrypoint, access variables through the appropriate mechanism for that runtime (e.g. `process.env.VARIABLE` in Node.js, `os.environ['VARIABLE']` in Python).
+With a non-bash entrypoint, read variables the way that language does (e.g. `process.env.VARIABLE` in Node.js, `os.environ['VARIABLE']` in Python).

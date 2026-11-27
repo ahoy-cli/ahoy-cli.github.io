@@ -24,12 +24,12 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          label: "Getting Started",
+          label: "Getting started",
           items: [
-            { label: "Installation & Setup", slug: "guides/getting-started" },
-            { label: "Next Steps", slug: "guides/next-steps" },
+            { label: "Installation & setup", slug: "guides/getting-started" },
+            { label: "Next steps", slug: "guides/next-steps" },
             {
-              label: "Shell Autocompletion",
+              label: "Shell autocompletion",
               slug: "guides/shell-autocompletion",
             },
           ],
@@ -37,18 +37,19 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
-            { label: "Writing Commands", slug: "guides/writing-commands" },
-            { label: "Command Execution", slug: "guides/command-execution" },
-            { label: "Importing & Overriding", slug: "guides/importing" },
-            { label: "Environment", slug: "guides/environment" },
+            { label: "Writing commands", slug: "guides/writing-commands" },
+            { label: "Command execution", slug: "guides/command-execution" },
+            { label: "Importing & overriding", slug: "guides/importing" },
+            { label: "Environment variables", slug: "guides/environment" },
           ],
         },
         {
           label: "Reference",
           items: [
-            { label: "CLI Reference", slug: "reference/cli" },
-            { label: "Environment Reference", slug: "reference/environment" },
-            { label: "YAML Schema", slug: "reference/yaml-schema" },
+            { label: "CLI reference", slug: "reference/cli" },
+            { label: "Environment reference", slug: "reference/environment" },
+            { label: "YAML schema", slug: "reference/yaml-schema" },
+            { label: "Security", slug: "security" },
           ],
         },
       ],

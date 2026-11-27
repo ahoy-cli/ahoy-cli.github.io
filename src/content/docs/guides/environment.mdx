@@ -1,15 +1,15 @@
 ---
-title: Environment Variables
-description: Loading environment files and managing configuration in Ahoy
+title: Environment variables
+description: Load environment files into your Ahoy commands
 ---
 
 import { Aside, Badge } from "@astrojs/starlight/components";
 
-Ahoy can load environment variables from files before running your commands, keeping configuration and secrets out of your YAML.
+Ahoy can load variables from `.env` files before it runs a command, so settings and secrets stay out of your `.ahoy.yml`.
 
 ## A simple example <Badge text="v2.3.0+" variant="tip" />
 
-Create a `.env` file alongside your `.ahoy.yml`:
+Create a `.env` file next to your `.ahoy.yml`:
 
 ```bash
 DB_USER=root
@@ -17,7 +17,7 @@ DB_PASS=secret
 DB_NAME=myapp
 ```
 
-Reference it in your config:
+Point to it in your config:
 
 ```yaml
 ahoyapi: v2
@@ -30,11 +30,11 @@ commands:
     cmd: mysql -u$DB_USER -p$DB_PASS $DB_NAME
 ```
 
-The path is relative to the `.ahoy.yml` file, not your working directory.
+The path is relative to `.ahoy.yml`, not to the directory you're in.
 
-## Global and per-command files
+## For every command, or just one
 
-The top-level `env` applies to every command. Individual commands can also specify their own `env`, which layers on top:
+An `env` at the top of the file applies to every command. A command can have its own `env` as well, which is loaded after the top-level one:
 
 ```yaml
 ahoyapi: v2
@@ -44,13 +44,13 @@ env: .env # Loaded for every command
 commands:
   deploy:
     usage: Deploy the application
-    env: .env.deploy # Also loaded for this command only
+    env: .env.deploy # Also loaded, for this command only
     cmd: ./deploy.sh
 ```
 
 ## Multiple files <Badge text="v2.5.0+" variant="note" />
 
-Both global and per-command `env` fields accept an array. Files are loaded in order - later files override earlier ones:
+Either `env` can be a list. Files load in order, and later files override earlier ones:
 
 ```yaml
 ahoyapi: v2
@@ -67,70 +67,53 @@ commands:
     cmd: ./deploy.sh staging
 ```
 
-A file like `.env.local` is often absent, for example when you start a project
-from a checked-out repo with an `.ahoy.yml` file in it. From v3.0.1 Ahoy
-reports this, rather than passing over it in silence, so please start marking such entries
-as optional - see below.
+## Files that might not exist <Badge text="v3.0.1+" variant="success" />
 
-## Files that may be absent <Badge text="v3.0.1+" variant="success" />
-
-A missing env file never stops a command - it is skipped, the variables it
-would have set stay empty, and the command runs. What changed in v3.0.1 is
-that Ahoy now shows a warning:
+If an env file is missing, Ahoy still runs the command. From v3.0.1 it also prints a warning, so a typo in a filename doesn't leave you wondering why a variable is empty:
 
 ```
 [warn] environment file '.env.local' not found, continuing without it. Add 'optional: true' to that entry if it is meant to be absent.
 ```
 
-Every entry is required by default, so a typo in a filename surfaces instead of
-leaving you to work out why a variable is empty. For the files that are meant
-to be missing - a personal `.env.local` that only some developers have - write
-the entry as a mapping and mark it `optional: true`:
+Some files are meant to be missing, such as a personal `.env.local` that only some people have. Mark those `optional: true` and Ahoy won't warn about them:
 
 ```yaml
 env:
-  - .env.base # Required: warns when absent
+  - .env.base # Warns if missing
   - path: .env.local
-    optional: true # Silent when absent
+    optional: true # Quiet if missing
 ```
 
-This is the same `optional` you may already use on
-[imports](/guides/importing/): simply meaning that the file is not expected to
-always present.
-
-The warning goes to stderr, so it never contaminates a command's stdout when
-you pipe it. `ahoy config validate` distinguishes the two as well, listing a
-missing required file with `❌` and a missing optional one with `➖ ... -
-missing, marked optional`.
+This works like `optional` on [imports](/guides/importing/). The warning goes to stderr, so it won't end up in piped output. `ahoy config validate` lists a missing required file with `❌` and a missing optional one with `➖`.
 
 <Aside type="caution" title="Requires v3.0.1">
-  The mapping form is not understood by earlier versions - Ahoy v2.5.0 fails to
-  parse it with `cannot unmarshal !!seq into string`. Keep the plain string form
-  if your `.ahoy.yml` is shared with anyone still on v2 or v3.0.0.
+  Older versions can't read the `path`/`optional` form. Ahoy v2.5.0 fails with
+  `cannot unmarshal !!seq into string`. Stick to plain filenames if anyone using your `.ahoy.yml` is
+  on v2 or v3.0.0.
 </Aside>
 
-## Precedence
+## Which value wins
 
-From lowest to highest:
+If the same variable is set in more than one place, the later one wins:
 
-1. Your shell's existing environment
-2. Global env files (in order)
-3. Command-specific env files (in order)
+1. Your shell's environment
+2. Top-level env files, in order
+3. The command's own env files, in order
 
-## Runtime variables <Badge text="v3" variant="success" />
+## Variables Ahoy sets <Badge text="v3" variant="success" />
 
-Ahoy automatically injects two variables into every command:
+Ahoy adds two variables to every command:
 
 | Variable            | Value                             |
 | ------------------- | --------------------------------- |
 | `AHOY_COMMAND_NAME` | The name of the command being run |
 | `AHOY_CMD`          | Path to the ahoy binary           |
 
-These are useful for scripts that call other ahoy commands, or need to know their own name.
+Use them in scripts that call other Ahoy commands or need to know their own name.
 
-## Keep secrets out of version control
+## Keep secrets out of git
 
-Add your real `.env` files to `.gitignore` and commit a `.env.example` with placeholder values:
+Add your real `.env` files to `.gitignore`, and commit a `.env.example` with placeholder values instead:
 
 ```
 # .gitignore
@@ -146,4 +129,4 @@ DB_PASS=your_password
 DB_NAME=your_database
 ```
 
-For the complete format specification and precedence details, see the [Environment Reference](/reference/environment).
+The [Environment reference](/reference/environment) has the full file format.

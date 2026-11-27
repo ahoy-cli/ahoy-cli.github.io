@@ -1,5 +1,5 @@
 ---
-title: CLI Reference
+title: CLI reference
 description: Complete reference for Ahoy command-line options and built-in commands
 ---
 
@@ -33,11 +33,11 @@ ahoy deploy --verbose     # --verbose is passed to the deploy command
 
 ### `ahoy config` <Badge text="v3" variant="success" />
 
-Management commands for your Ahoy configuration.
+Commands for setting up and checking your `.ahoy.yml`.
 
 #### `ahoy config init [url]`
 
-Downloads a starter `.ahoy.yml` into the current directory. Without a URL it fetches the official examples file (30+ ready-to-use commands). Pass a custom URL to download your own template.
+Downloads a starter `.ahoy.yml` into the current directory. Without a URL it fetches the official examples file, which has around 30 commands. Pass a URL to download your own template instead.
 
 ```bash
 ahoy config init               # Download official examples
@@ -47,7 +47,7 @@ ahoy config init --force       # Overwrite an existing .ahoy.yml
 
 #### `ahoy config validate`
 
-Checks your `.ahoy.yml` (and any imported files) for common issues:
+Checks your `.ahoy.yml` and any imported files for:
 
 - Unsupported or missing fields
 - Missing import files (not marked `optional: true`)
@@ -57,7 +57,7 @@ Checks your `.ahoy.yml` (and any imported files) for common issues:
 ahoy config validate
 ```
 
-Errors are always shown. Warnings are shown in verbose mode (`--verbose`). The validator also provides actionable suggestions when it finds a problem.
+Errors are always shown. Warnings are only shown with `--verbose`. Where it can, the validator suggests a fix.
 
 ### `ahoy help`
 
@@ -68,13 +68,13 @@ ahoy help <command>  # Help for a specific command
 
 ### Deprecated: `ahoy init`
 
-`ahoy init` still works but is deprecated. It redirects to `ahoy config init` with a notice. Prefer `ahoy config init` in any new scripts or documentation.
+`ahoy init` still works, but prints a notice and runs `ahoy config init`. Use `ahoy config init` in new scripts and docs.
 
 ## Conventional commands
 
 ### `ahoy confirm <message>`
 
-`confirm` is not built in - it is a convention: a small command you define in your own config (and can import from [confirmation.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/confirmation.ahoy.yml)) to guard destructive operations. Because Ahoy commands can call other Ahoy commands, it behaves like a reusable function.
+`confirm` isn't built in. It's a small command you add to your own config, or import from [confirmation.ahoy.yml](https://github.com/ahoy-cli/ahoy/blob/master/examples/confirmation.ahoy.yml), to ask before destructive operations. Other commands call it like a function.
 
 It prompts with your message and exits `0` when the answer is `y`, or `1` otherwise, so it chains with `&&`, `||` and `|| exit 0`:
 
@@ -98,7 +98,7 @@ commands:
 
 `hide: true` keeps the helper out of the command listing without disabling it.
 
-The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml) carries a fuller version that also works unattended, controlled by two environment variables you set yourself:
+The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml) has a fuller version that also works in scripts and CI. Two environment variables control it:
 
 | Variable                | Effect                                                            |
 | ----------------------- | ----------------------------------------------------------------- |
@@ -109,17 +109,17 @@ The [examples file](https://github.com/ahoy-cli/ahoy/blob/master/examples/exampl
 AHOY_CONFIRM_RESPONSE=y AHOY_CONFIRM_WAIT_SKIP=1 ahoy db:reset
 ```
 
-See [Writing Commands](/guides/writing-commands) for the full pattern.
+[Writing commands](/guides/writing-commands#asking-before-destructive-commands) shows the full version.
 
 ## Config file discovery
 
-Ahoy searches for `.ahoy.yml` in the following order:
+Ahoy looks for its config file in this order:
 
 1. The file specified by `--file` / `-f`
 2. `.ahoy.yml` in the current directory
 3. `.ahoy.yml` in each parent directory, up to the filesystem root
 
-The directory containing the found config file becomes the working directory for all commands.
+Commands run from the directory that contains the config file.
 
 ## Passing arguments to commands
 
@@ -131,10 +131,9 @@ ahoy copy a.txt b.txt  # $1 = "a.txt", $2 = "b.txt"
 ahoy run npm test      # $@ = "npm test"
 ```
 
-Everything after the command name is passed through **verbatim and in order**,
-including anything that looks like a flag. Ahoy never claims a flag there, even
-one of its own - which is what makes Ahoy usable as a wrapper around other
-tools:
+Everything after the command name is passed through **unchanged and in order**,
+including anything that looks like a flag. Ahoy never takes a flag from there,
+even one of its own, so you can wrap other tools without surprises:
 
 ```bash
 ahoy test --filter=MyTest --stop-on-failure   # all four tokens reach the command
@@ -144,9 +143,9 @@ ahoy phpunit --help                           # PHPUnit's help, not Ahoy's
 
 To reach Ahoy's own help for a command, use `ahoy help <command>`.
 
-A leading `--` is accepted for readability and removed before the arguments are
-passed on. Any later `--` is the command's own data and reaches it untouched,
-which matters for the many tools that need a separator of their own:
+A `--` straight after the command name is allowed for readability and removed.
+Any later `--` is passed to the command, for tools that use a separator of
+their own:
 
 ```bash
 ahoy run -- npm test               # $@ = "npm test"
@@ -171,9 +170,9 @@ ahoy git checkout -- src/main.go   # $@ = "checkout -- src/main.go"
 
 ## Standard streams
 
-Ahoy passes stdin, stdout and stderr through unchanged - each command inherits
-the streams of the process that invoked Ahoy, whether those are a terminal,
-pipes, or files. It does not read, buffer, tee or copy them, so:
+Each command uses the same stdin, stdout and stderr as the process that ran
+Ahoy, whether those are a terminal, pipes or files. Ahoy does not read, buffer,
+tee or copy them, so:
 
 - Interactive commands get a real prompt and readline support when stdin is
   attached to a TTY
@@ -209,15 +208,15 @@ Use the dedicated plugin at [ahoy-cli/zsh-ahoy](https://github.com/ahoy-cli/zsh-
 | `0`  | Success                                                |
 | `1`  | General error (command failed, config not found, etc.) |
 
-Ahoy passes the exit code of the underlying command through unchanged.
+Otherwise Ahoy exits with your command's own exit code.
 
 ## Environment variables set by Ahoy <Badge text="v3" variant="success" />
 
-Ahoy injects the following variables into every command's environment:
+Ahoy adds these variables to every command's environment:
 
 | Variable            | Value                             |
 | ------------------- | --------------------------------- |
 | `AHOY_COMMAND_NAME` | The name of the command being run |
 | `AHOY_CMD`          | Path to the ahoy binary           |
 
-These are available to any script invoked through Ahoy.
+Any script run through Ahoy can read them.

@@ -1,12 +1,12 @@
 ---
-title: Getting Started with Ahoy
+title: Getting started with Ahoy
 description: Install Ahoy and run your first commands
 ---
 
 import { Tabs, TabItem } from "@astrojs/starlight/components";
 import { Aside } from "@astrojs/starlight/components";
 
-## Installation
+## Install
 
 <Tabs>
   <TabItem label="macOS / Linuxbrew">
@@ -19,57 +19,54 @@ import { Aside } from "@astrojs/starlight/components";
     os=$(uname -s | tr '[:upper:]' '[:lower:]') && architecture=$(case $(uname -m) in (x86_64 | amd64) echo "amd64" ;; (aarch64 | arm64 | armv8*) echo "arm64" ;; (armv7*) echo "armv7" ;; (armv6*) echo "armv6" ;; esac) && { [ -n "$architecture" ] || { echo "Unsupported architecture: $(uname -m)" >&2; false; }; } && sudo wget -q https://github.com/ahoy-cli/ahoy/releases/latest/download/ahoy-bin-$os-$architecture -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
     ```
 
-    Or download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases) and place the binary somewhere in your `$PATH`.
+    Or download the [latest release from GitHub](https://github.com/ahoy-cli/ahoy/releases) and put the binary somewhere in your `$PATH`.
 
   </TabItem>
   <TabItem label="Windows (WSL2)">
-    Use the Linux instructions above.
+    Use the Linux instructions.
   </TabItem>
 </Tabs>
 
-<Aside type="note" title="Looking for Ahoy v2?">
-  Homebrew has switched to v3, so `brew install ahoy` now installs the latest v3 release. The Linux
-  command above resolves to v3 as well, since it downloads from `/releases/latest/`.
-
-  v3 is intended to be fully backwards compatible with existing v2 `.ahoy.yml` files, so most
-  projects need no changes. If you do still need v2, download it from the
-  [v2.5.0 release page](https://github.com/ahoy-cli/ahoy/releases/tag/v2.5.0) - v2.5.0 is the latest
-  v2 release, and there is no `ahoy@2` Homebrew formula.
-
-  ```bash
-  # Linux amd64. The v2 release also provides ahoy-bin-linux-arm64, ahoy-bin-linux-arm,
-  # ahoy-bin-darwin-amd64 and ahoy-bin-darwin-arm64.
-  sudo wget -q https://github.com/ahoy-cli/ahoy/releases/download/v2.5.0/ahoy-bin-linux-amd64 -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
-  ```
-</Aside>
-
-For security's sake, please [verify your download](#verifying-your-download).
-
-Then verify that `ahoy` is working:
+Check it works:
 
 ```bash
 ahoy --version
 ```
 
-## Start with examples
+We recommend you [verify your download](#verifying-your-download) too.
 
-The quickest way to get going is to initialise a project with our curated examples file. It includes 20+ ready-to-use commands for common development workflows.
+<Aside type="note" title="Need Ahoy v2?">
+  Both commands above install v3. It reads v2 `.ahoy.yml` files, so most projects need no changes.
+
+  If you still need v2, the last release is
+  [v2.5.0](https://github.com/ahoy-cli/ahoy/releases/tag/v2.5.0). There's no `ahoy@2` Homebrew
+  formula, so download it directly:
+
+  ```bash
+  # Linux amd64. The release also has ahoy-bin-linux-arm64, ahoy-bin-linux-arm,
+  # ahoy-bin-darwin-amd64 and ahoy-bin-darwin-arm64.
+  sudo wget -q https://github.com/ahoy-cli/ahoy/releases/download/v2.5.0/ahoy-bin-linux-amd64 -O /usr/local/bin/ahoy && sudo chown $USER /usr/local/bin/ahoy && chmod +x /usr/local/bin/ahoy
+  ```
+</Aside>
+
+## Start with the examples
+
+The fastest way in is the examples file, which has around 30 commands for common development jobs:
 
 ```bash
 cd my-project
 ahoy config init
 ```
 
-This creates an `.ahoy.yml` in the current directory. Run `ahoy` on its own to see what's available:
+This creates an `.ahoy.yml` in the current directory. Run `ahoy` on its own to see what's in it:
 
 ```bash
 ahoy
 ```
 
 <Aside type="tip">
-  Want to inspect the file before downloading? The examples file is at
-  [`examples/examples.ahoy.yml`](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml)
-  in the repository.
+  You can read the file first on GitHub:
+  [`examples/examples.ahoy.yml`](https://github.com/ahoy-cli/ahoy/blob/master/examples/examples.ahoy.yml).
 </Aside>
 
 ## Write your own commands
@@ -93,19 +90,16 @@ commands:
     cmd: docker-compose logs -f "$@"
 ```
 
-Run your commands from anywhere in the project tree:
+Then run them:
 
 ```bash
 ahoy hello World   # Hello, World!
 ahoy start
 ahoy logs web
-ahoy              # Shows all commands and their usage text
+ahoy               # Lists all commands with their usage text
 ```
 
-<Aside type="note">
-  Ahoy searches up the directory tree for `.ahoy.yml`, so you can run commands from any subdirectory
-  in your project.
-</Aside>
+Ahoy looks for `.ahoy.yml` in the current directory and then each parent directory, so these work from anywhere inside the project.
 
 ## Verifying your download
 
@@ -165,7 +159,7 @@ In v3.0.0 and earlier, the checksums file only lists the `.tar.gz` and `.zip` ar
 
 ## Next steps
 
-- [Writing Commands](/guides/writing-commands) - practical patterns and real-world examples
-- [Shell Autocompletion](/guides/shell-autocompletion) - set up tab completion
-- [YAML Schema Reference](/reference/yaml-schema) - complete field-by-field reference
-- [CLI Reference](/reference/cli) - all command-line flags and built-in commands
+- [Writing commands](/guides/writing-commands): arguments, aliases and longer scripts
+- [Shell autocompletion](/guides/shell-autocompletion): set up tab completion
+- [YAML schema](/reference/yaml-schema): every field in `.ahoy.yml`
+- [CLI reference](/reference/cli): flags and built-in commands
