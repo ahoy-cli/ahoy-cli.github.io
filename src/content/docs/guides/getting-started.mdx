@@ -109,17 +109,48 @@ ahoy              # Shows all commands and their usage text
 
 ## Verifying your download
 
-Homebrew checks every download against the SHA-256 in its formula, so a
-Homebrew install needs no extra step. The steps below are for installing the
-binary yourself: download a release, check it, then install the file you
-checked.
+Homebrew checks each download against the SHA-256 in its formula, so there's nothing extra to do if you used `brew install`. If you install the binary yourself, download it, check it, then install the file you checked.
 
-Every release ships an `ahoy_<version>_checksums.txt` listing a SHA-256 for each
-published file. Set `FILE` to the binary for your platform, for example
-`ahoy-bin-darwin-arm64` on an Apple Silicon Mac:
+Each release includes an `ahoy_<version>_checksums.txt` file with a SHA-256 checksum for every file in the release. From v3.0.2, that file is also signed with [cosign](https://docs.sigstore.dev/). Set `FILE` to the binary for your platform, such as `ahoy-bin-darwin-arm64` on an Apple Silicon Mac:
 
 ```bash
 VERSION=3.0.2
+FILE=ahoy-bin-linux-amd64
+BASE=https://github.com/ahoy-cli/ahoy/releases/download/v$VERSION
+
+curl -fsSLO $BASE/$FILE
+curl -fsSLO $BASE/ahoy_${VERSION}_checksums.txt
+curl -fsSLO $BASE/ahoy_${VERSION}_checksums.txt.bundle
+
+cosign verify-blob ahoy_${VERSION}_checksums.txt \
+  --bundle ahoy_${VERSION}_checksums.txt.bundle \
+  --certificate-identity "https://github.com/ahoy-cli/ahoy/.github/workflows/release.yml@refs/tags/v${VERSION}" \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  && sha256sum -c ahoy_${VERSION}_checksums.txt --ignore-missing \
+  && sudo install -m 755 $FILE /usr/local/bin/ahoy
+```
+
+Each step only runs if the one before it passed:
+
+1. `cosign` checks that Ahoy's own release workflow made the checksums file, for the version you asked for. A signature from any other tag or branch fails.
+2. `sha256sum` checks your binary against that checksums file. `--ignore-missing` checks only the files you downloaded.
+3. `install` puts that same binary in `/usr/local/bin`.
+
+On macOS, use `shasum -a 256 -c` instead of `sha256sum -c`.
+
+There's no public key to download, because cosign signing here is keyless: the signature records which workflow and tag made it. The signature matters because a checksum shows a file is intact, but not who made it. Someone who could replace the binary could replace the checksums file too.
+
+<Aside type="caution" title="cosign v3">
+  cosign v3 replaced the `--output-signature` and `--output-certificate` flags with `--bundle`, so
+  examples written for cosign v2 won't work.
+</Aside>
+
+### Releases before v3.0.2
+
+v3.0.1 has checksums but no signature, so you can only do the checksum step:
+
+```bash
+VERSION=3.0.1
 FILE=ahoy-bin-linux-amd64
 BASE=https://github.com/ahoy-cli/ahoy/releases/download/v$VERSION
 
@@ -130,49 +161,7 @@ sha256sum -c ahoy_${VERSION}_checksums.txt --ignore-missing \
   && sudo install -m 755 $FILE /usr/local/bin/ahoy
 ```
 
-The binary is only installed if the check passes. `--ignore-missing` checks only
-the files you actually downloaded, rather than complaining about the thirty or
-so you did not. On macOS, use `shasum -a 256 -c` in place of `sha256sum -c`.
-
-<Aside type="note" title="Older releases">
-  From v3.0.1 the checksums file covers the individual `ahoy-bin-*` binaries as
-  well as the `.tar.gz` and `.zip` archives. In v3.0.0 and earlier it listed only
-  the archives and SBOMs, so the binary the install command downloads could not
-  be verified.
-</Aside>
-
-### Checking the signature
-
-Checksums prove a file arrived intact, but not who produced it: anyone able to
-replace a binary could replace the checksums file alongside it. Releases are
-therefore signed with [cosign](https://docs.sigstore.dev/), and the signature
-covers the checksums file, which in turn covers every other artifact.
-
-Signing is keyless, so there is no public key to fetch. The signature records
-the GitHub Actions workflow and the release tag that produced it, and you
-assert both. Run this in the same shell, after the downloads above and before
-the checksum check:
-
-```bash
-curl -fsSLO $BASE/ahoy_${VERSION}_checksums.txt.bundle
-
-cosign verify-blob ahoy_${VERSION}_checksums.txt \
-  --bundle ahoy_${VERSION}_checksums.txt.bundle \
-  --certificate-identity "https://github.com/ahoy-cli/ahoy/.github/workflows/release.yml@refs/tags/v${VERSION}" \
-  --certificate-oidc-issuer https://token.actions.githubusercontent.com
-```
-
-`Verified OK` means the checksums file was produced by Ahoy's own release
-workflow, for the version you asked for. A signature from any other tag or
-branch is rejected. With the checksum check passing as well, the whole
-download is accounted for.
-
-<Aside type="caution" title="Requires v3.0.2">
-  Signatures are published from v3.0.2 onwards. Earlier releases have checksums
-  but no `.bundle` file. Note also that cosign v3 replaced the older
-  `--output-signature` and `--output-certificate` flags with `--bundle`, so
-  examples written for cosign v2 will not work.
-</Aside>
+In v3.0.0 and earlier, the checksums file only lists the `.tar.gz` and `.zip` archives and SBOMs, so you can't check the `ahoy-bin-*` binary on its own.
 
 ## Next steps
 
